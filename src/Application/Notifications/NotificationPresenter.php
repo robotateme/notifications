@@ -14,7 +14,9 @@ class NotificationPresenter
         return [
             'id' => $notification->id,
             'idempotency_key' => $notification->idempotencyKey,
+            'subscriber_id' => $notification->subscriberId,
             'channel' => $notification->channel->value,
+            'priority' => $notification->priority->value,
             'recipient' => $notification->recipient,
             'subject' => $notification->subject,
             'body' => $notification->body,
@@ -24,7 +26,8 @@ class NotificationPresenter
             'queued_at' => $notification->queuedAt->toISOString(),
             'processing_at' => $notification->processingAt?->toISOString(),
             'sent_at' => $notification->sentAt?->toISOString(),
-            'failed_at' => $notification->failedAt?->toISOString(),
+            'delivered_at' => $notification->deliveredAt?->toISOString(),
+            'dropped_at' => $notification->droppedAt?->toISOString(),
             'last_error' => $notification->lastError,
         ];
     }

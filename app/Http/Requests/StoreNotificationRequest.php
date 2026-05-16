@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Domain\Notifications\NotificationChannel;
+use Domain\Notifications\NotificationPriority;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,7 @@ class StoreNotificationRequest extends FormRequest
     {
         return [
             'idempotency_key' => ['nullable', 'string', 'max:120'],
+            'subscriber_id' => ['nullable', 'string', 'max:255'],
             'channel' => [
                 'required',
                 'string',
@@ -33,6 +35,14 @@ class StoreNotificationRequest extends FormRequest
                     NotificationChannel::Email->value,
                     NotificationChannel::Sms->value,
                     NotificationChannel::Push->value,
+                ]),
+            ],
+            'priority' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    NotificationPriority::Transactional->value,
+                    NotificationPriority::Marketing->value,
                 ]),
             ],
             'recipient' => ['required', 'string', 'max:255'],

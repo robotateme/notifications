@@ -6,6 +6,7 @@ use App\Models\NotificationMessage;
 use Application\Notifications\Ports\NotificationRepository;
 use Domain\Notifications\Notification;
 use Domain\Notifications\NotificationChannel;
+use Domain\Notifications\NotificationPriority;
 use Domain\Notifications\NotificationStatus;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
@@ -41,6 +42,16 @@ class EloquentNotificationRepository implements NotificationRepository
         return $model === null ? null : $this->toDomain($model);
     }
 
+    public function findBySubscriberId(string $subscriberId): array
+    {
+        return NotificationMessage::query()
+            ->where('subscriber_id', $subscriberId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (NotificationMessage $model): Notification => $this->toDomain($model))
+            ->all();
+    }
+
     public function add(Notification $notification): Notification
     {
         $model = NotificationMessage::query()->create($this->toPersistence($notification));
@@ -60,7 +71,9 @@ class EloquentNotificationRepository implements NotificationRepository
             internalId: $model->id,
             id: $model->uuid,
             idempotencyKey: $model->idempotency_key,
+            subscriberId: $model->subscriber_id,
             channel: NotificationChannel::from($model->channel),
+            priority: NotificationPriority::from($model->priority),
             recipient: $model->recipient,
             subject: $model->subject,
             body: $model->body,
@@ -70,7 +83,8 @@ class EloquentNotificationRepository implements NotificationRepository
             queuedAt: Carbon::parse($model->queued_at),
             processingAt: $model->processing_at,
             sentAt: $model->sent_at,
-            failedAt: $model->failed_at,
+            deliveredAt: $model->delivered_at,
+            droppedAt: $model->dropped_at,
             lastError: $model->last_error,
         );
     }
@@ -83,7 +97,9 @@ class EloquentNotificationRepository implements NotificationRepository
         return [
             'uuid' => $notification->id,
             'idempotency_key' => $notification->idempotencyKey,
+            'subscriber_id' => $notification->subscriberId,
             'channel' => $notification->channel->value,
+            'priority' => $notification->priority->value,
             'recipient' => $notification->recipient,
             'subject' => $notification->subject,
             'body' => $notification->body,
@@ -93,7 +109,8 @@ class EloquentNotificationRepository implements NotificationRepository
             'queued_at' => $notification->queuedAt,
             'processing_at' => $notification->processingAt,
             'sent_at' => $notification->sentAt,
-            'failed_at' => $notification->failedAt,
+            'delivered_at' => $notification->deliveredAt,
+            'dropped_at' => $notification->droppedAt,
             'last_error' => $notification->lastError,
         ];
     }
