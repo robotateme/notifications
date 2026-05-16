@@ -38,7 +38,7 @@ class SendNotificationJobTest extends TestCase
         $this->assertNull($message->last_error);
     }
 
-    public function test_job_marks_notification_as_failed_and_rethrows_delivery_errors(): void
+    public function test_job_records_failure_and_rethrows_delivery_errors(): void
     {
         $message = NotificationMessage::query()->create([
             'channel' => NotificationMessage::CHANNEL_EMAIL,
@@ -62,9 +62,26 @@ class SendNotificationJobTest extends TestCase
 
         $message->refresh();
 
-        $this->assertSame(NotificationMessage::STATUS_FAILED, $message->status);
+        $this->assertSame(NotificationMessage::STATUS_QUEUED, $message->status);
         $this->assertSame(1, $message->attempts);
-        $this->assertNotNull($message->failed_at);
+        $this->assertNull($message->dropped_at);
         $this->assertSame('Delivery provider rejected the message.', $message->last_error);
+    }
+
+    public function test_job_marks_notification_as_dropped_after_retries_are_exhausted(): void
+    {
+        $message = NotificationMessage::query()->create([
+            'channel' => NotificationMessage::CHANNEL_EMAIL,
+            'recipient' => 'invalid',
+            'body' => 'Hello.',
+        ]);
+
+        (new SendNotificationJob($message->id))->failed(new Exception('Retries exhausted.'));
+
+        $message->refresh();
+
+        $this->assertSame(NotificationMessage::STATUS_DROPPED, $message->status);
+        $this->assertNotNull($message->dropped_at);
+        $this->assertSame('Retries exhausted.', $message->last_error);
     }
 }

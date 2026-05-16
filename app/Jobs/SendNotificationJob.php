@@ -3,8 +3,11 @@
 namespace App\Jobs;
 
 use Application\Notifications\Commands\SendQueuedNotificationHandler;
+use Application\Notifications\Ports\DomainEventPublisher;
+use Application\Notifications\Ports\NotificationRepository;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 class SendNotificationJob implements ShouldQueue
 {
@@ -25,5 +28,24 @@ class SendNotificationJob implements ShouldQueue
     public function handle(SendQueuedNotificationHandler $handler): void
     {
         $handler->handle($this->notificationMessageId);
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        $notifications = app(NotificationRepository::class);
+        $notification = $notifications->get($this->notificationMessageId);
+
+        if ($notification->wasSent()) {
+            return;
+        }
+
+        $notification->markDropped($exception->getMessage());
+        $notifications->save($notification);
+
+        $events = app(DomainEventPublisher::class);
+
+        foreach ($notification->releaseDomainEvents() as $event) {
+            $events->publish($event);
+        }
     }
 }

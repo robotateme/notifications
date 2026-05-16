@@ -15,6 +15,8 @@ class LaravelNotificationQueue implements NotificationQueue
             throw new LogicException('Notification must be persisted before enqueueing.');
         }
 
-        SendNotificationJob::dispatch($notification->internalId)->onQueue('notifications');
+        $queue = $notification->isTransactional() ? 'notifications-high' : 'notifications';
+
+        SendNotificationJob::dispatch($notification->internalId)->onQueue($queue);
     }
 }
