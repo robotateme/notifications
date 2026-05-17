@@ -58,7 +58,10 @@ fresh:
 	$(DC) exec $(APP) php artisan migrate:fresh
 
 test:
-	$(DC) exec $(APP) php artisan test
+	@$(DC) stop queue.worker outbox.publisher >/dev/null
+	@status=0; $(DC) exec $(APP) php artisan test || status=$$?; \
+	$(DC) start queue.worker outbox.publisher >/dev/null; \
+	exit $$status
 
 pint:
 	$(DC) exec $(APP) ./vendor/bin/pint app src tests routes config database/migrations
