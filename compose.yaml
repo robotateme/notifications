@@ -1,6 +1,9 @@
 services:
     laravel.test:
-        image: 'laravelsail/php85-composer:latest'
+        build:
+            context: .
+            dockerfile: docker/app/Dockerfile
+        image: 'notifications-app:latest'
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
@@ -33,7 +36,10 @@ services:
             redis:
                 condition: service_healthy
     queue.worker:
-        image: 'laravelsail/php85-composer:latest'
+        build:
+            context: .
+            dockerfile: docker/app/Dockerfile
+        image: 'notifications-app:latest'
         working_dir: /var/www/html
         command: >
             sh -c "while [ ! -f vendor/autoload.php ]; do sleep 1; done &&
@@ -49,7 +55,10 @@ services:
             laravel.test:
                 condition: service_started
     outbox.publisher:
-        image: 'laravelsail/php85-composer:latest'
+        build:
+            context: .
+            dockerfile: docker/app/Dockerfile
+        image: 'notifications-app:latest'
         working_dir: /var/www/html
         command: >
             sh -c "while [ ! -f vendor/autoload.php ]; do sleep 1; done &&
@@ -75,7 +84,6 @@ services:
             POSTGRES_PASSWORD: '${DB_PASSWORD:-password}'
         volumes:
             - 'sail-pgsql:/var/lib/postgresql/data'
-            - './vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
         networks:
             - sail
         healthcheck:
