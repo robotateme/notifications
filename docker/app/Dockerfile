@@ -5,6 +5,7 @@ WORKDIR /var/www/html
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
+        kcat \
         libpq-dev \
         unzip \
         zip \

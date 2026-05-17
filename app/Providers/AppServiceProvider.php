@@ -12,7 +12,7 @@ use Application\Notifications\Ports\OutboxMessageRepository;
 use Illuminate\Support\ServiceProvider;
 use Infrastructure\Notifications\Delivery\LogNotificationDeliveryGateway;
 use Infrastructure\Notifications\Events\EloquentOutboxMessageRepository;
-use Infrastructure\Notifications\Events\KafkaRestMessageBroker;
+use Infrastructure\Notifications\Events\KcatMessageBroker;
 use Infrastructure\Notifications\Events\LogMessageBroker;
 use Infrastructure\Notifications\Events\OutboxDomainEventPublisher;
 use Infrastructure\Notifications\Idempotency\CacheIdempotencyGuard;
@@ -32,8 +32,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(OutboxMessageRepository::class, EloquentOutboxMessageRepository::class);
         $this->app->bind(IdempotencyGuard::class, CacheIdempotencyGuard::class);
         $this->app->bind(MessageBroker::class, function ($app): MessageBroker {
-            if (config('kafka.publisher') === 'rest') {
-                return $app->make(KafkaRestMessageBroker::class);
+            if (config('kafka.publisher') === 'kcat') {
+                return $app->make(KcatMessageBroker::class);
             }
 
             return $app->make(LogMessageBroker::class);

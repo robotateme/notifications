@@ -13,10 +13,9 @@ make up
 
 Приложение будет доступно на `http://localhost`.
 Kafka UI: `http://localhost:8081`.
-Kafka REST Proxy: `http://localhost:8082`.
 
-Стек поднимает приложение, PostgreSQL, Redis, Kafka, Kafka REST Proxy, Kafka UI,
-queue worker и outbox publisher.
+Стек поднимает приложение, PostgreSQL, Redis, Kafka, Kafka UI, queue worker и
+outbox publisher.
 
 ## Очередь уведомлений
 
@@ -34,7 +33,7 @@ make outbox-logs
 ```
 
 Outbox publisher публикует pending domain events из таблицы `outbox_messages`
-в Kafka через Kafka REST Proxy.
+в Kafka через `kcat` внутри app-контейнера.
 
 Разовый запуск publisher:
 
