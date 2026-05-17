@@ -3,7 +3,6 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
-        image: 'notifications-app:latest'
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
@@ -37,7 +36,6 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
-        image: 'notifications-app:latest'
         working_dir: /var/www/html
         command: >
             sh -c "while [ ! -f vendor/autoload.php ]; do sleep 1; done &&
@@ -56,7 +54,6 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
-        image: 'notifications-app:latest'
         working_dir: /var/www/html
         command: >
             sh -c "while [ ! -f vendor/autoload.php ]; do sleep 1; done &&

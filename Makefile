@@ -24,14 +24,14 @@ help:
 	@echo "  make status      Show containers"
 
 up:
-	$(DC) up -d
+	$(DC) up -d --build
 
 down:
 	$(DC) down
 
 restart:
 	$(DC) down
-	$(DC) up -d
+	$(DC) up -d --build
 
 logs:
 	$(DC) logs -f
