@@ -1,35 +1,78 @@
 # Notification Service
 
-## Localhost запуск
+## Требования
+
+- Docker и Docker Compose
+- Make
+
+## Запуск
 
 ```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-./vendor/bin/sail up -d
-./vendor/bin/sail artisan migrate
+make up
 ```
 
 Приложение будет доступно на `http://localhost`.
+Kafka UI: `http://localhost:8081`.
+Kafka REST Proxy: `http://localhost:8082`.
+
+Стек поднимает приложение, PostgreSQL, Redis, Kafka, Kafka REST Proxy, Kafka UI,
+queue worker и outbox publisher.
 
 ## Очередь уведомлений
 
 ```bash
-./vendor/bin/sail artisan queue:work --queue=notifications --tries=3
+make queue-logs
+```
+
+`transactional` уведомления попадают в `notifications-high`, `marketing` - в
+`notifications`.
+
+## Outbox publisher
+
+```bash
+make outbox-logs
+```
+
+Outbox publisher публикует pending domain events из таблицы `outbox_messages`
+в Kafka через Kafka REST Proxy.
+
+Разовый запуск publisher:
+
+```bash
+make outbox
 ```
 
 ## Проверка API
 
 ```bash
-curl -X POST http://localhost/api/notifications \
+curl -X POST http://localhost/api/notifications/bulk \
   -H 'Content-Type: application/json' \
   -d '{
-    "idempotency_key": "order-1001-email",
+    "idempotency_key": "campaign-42",
     "channel": "email",
-    "recipient": "customer@example.com",
-    "subject": "Order shipped",
-    "body": "Your order is on the way."
+    "priority": "marketing",
+    "message": "Service window starts tonight.",
+    "recipients": ["customer@example.com"]
   }'
 ```
 
-Kafka UI: `http://localhost:8081`.
+История уведомлений подписчика:
+
+```bash
+curl http://localhost/api/subscribers/customer@example.com/notifications
+```
+
+## API описание
+
+OpenAPI spec: `docs/openapi.yaml`.
+
+## Полезные команды
+
+```bash
+make status
+make logs
+make test
+make pint
+make validate
+make down
+```

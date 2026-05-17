@@ -1,0 +1,98 @@
+openapi: 3.0.3
+info:
+  title: Notification Service API
+  version: 1.0.0
+servers:
+  - url: http://localhost/api
+paths:
+  /notifications/bulk:
+    post:
+      summary: Start bulk SMS or Email notification campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, priority, recipients]
+              properties:
+                idempotency_key:
+                  type: string
+                  example: campaign-42
+                channel:
+                  type: string
+                  enum: [email, sms]
+                priority:
+                  type: string
+                  enum: [transactional, marketing]
+                subject:
+                  type: string
+                  nullable: true
+                body:
+                  type: string
+                  example: Service window starts tonight.
+                message:
+                  type: string
+                  description: Alias for body.
+                recipients:
+                  type: array
+                  items:
+                    type: string
+                  example: [subscriber@example.com, +15555550100]
+      responses:
+        '202':
+          description: Notifications accepted.
+  /notifications/{notification}:
+    get:
+      summary: Get notification status by public id
+      parameters:
+        - name: notification
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification status.
+        '404':
+          description: Notification not found.
+  /notifications/{notification}/delivery-status:
+    post:
+      summary: Confirm provider delivery status
+      parameters:
+        - name: notification
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [delivered, dropped]
+                error:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Updated notification.
+        '404':
+          description: Notification not found.
+  /subscribers/{subscriber}/notifications:
+    get:
+      summary: List subscriber notification history
+      parameters:
+        - name: subscriber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscriber notification history.
