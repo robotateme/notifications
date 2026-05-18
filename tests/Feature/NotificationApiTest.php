@@ -4,10 +4,14 @@ namespace Tests\Feature;
 
 use App\Jobs\SendNotificationJob;
 use App\Models\NotificationMessage;
+use App\Models\OutboxMessage;
+use Application\Notifications\Ports\DomainEventPublisher;
 use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
 use Domain\Notifications\NotificationStatus;
+use Domain\Shared\DomainEvent;
 use Domain\Shared\Timestamp;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Infrastructure\Notifications\Identity\UuidNotificationIdGenerator;
@@ -99,6 +103,31 @@ final class NotificationApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['channel', 'recipient', 'body']);
 
+        Queue::assertNothingPushed();
+    }
+
+    public function test_notification_creation_is_rolled_back_when_outbox_write_fails(): void
+    {
+        Queue::fake();
+
+        $this->app->instance(DomainEventPublisher::class, new class implements DomainEventPublisher
+        {
+            public function publish(DomainEvent $event): void
+            {
+                throw new Exception('Outbox write failed.');
+            }
+        });
+
+        $response = $this->postJson('/api/notifications', [
+            'channel' => 'email',
+            'recipient' => 'customer@example.com',
+            'body' => 'Hello.',
+        ]);
+
+        $response->assertStatus(500);
+
+        $this->assertSame(0, NotificationMessage::query()->count());
+        $this->assertSame(0, OutboxMessage::query()->count());
         Queue::assertNothingPushed();
     }
 

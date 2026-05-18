@@ -2,90 +2,141 @@ openapi: 3.0.3
 info:
   title: Notification Service API
   version: 1.0.0
+  description: API for queuing SMS, Email, and Push notifications and tracking delivery statuses.
 servers:
   - url: http://localhost/api
+tags:
+  - name: Notifications
+  - name: Subscribers
 paths:
-  /notifications/bulk:
+  /notifications:
     post:
-      summary: Start bulk SMS or Email notification campaign
+      tags: [Notifications]
+      summary: Queue a single notification
+      description: Creates a notification or returns the existing one when the idempotency key has already been used.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [channel, priority, recipients]
-              properties:
-                idempotency_key:
-                  type: string
-                  example: campaign-42
-                channel:
-                  type: string
-                  enum: [email, sms]
-                priority:
-                  type: string
-                  enum: [transactional, marketing]
-                subject:
-                  type: string
-                  nullable: true
-                body:
-                  type: string
-                  example: Service window starts tonight.
-                message:
-                  type: string
-                  description: Alias for body.
-                recipients:
-                  type: array
-                  items:
-                    type: string
-                  example: [subscriber@example.com, +15555550100]
+              $ref: '#/components/schemas/CreateNotificationRequest'
+            examples:
+              email:
+                value:
+                  idempotency_key: order-1001-email
+                  channel: email
+                  priority: marketing
+                  recipient: customer@example.com
+                  subject: Order shipped
+                  body: Your order is on the way.
+                  payload:
+                    order_id: 1001
+              sms:
+                value:
+                  channel: sms
+                  priority: transactional
+                  recipient: '+15555550100'
+                  body: Your access code is 123456.
+      responses:
+        '202':
+          description: Notification accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '200':
+          description: Existing notification returned for the idempotency key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /notifications/bulk:
+    post:
+      tags: [Notifications]
+      summary: Queue a bulk SMS or Email campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBulkNotificationsRequest'
+            examples:
+              marketingEmail:
+                value:
+                  idempotency_key: campaign-42
+                  channel: email
+                  priority: marketing
+                  subject: Sale
+                  body: Sale starts today.
+                  recipients:
+                    - first@example.com
+                    - second@example.com
+              transactionalSms:
+                value:
+                  channel: sms
+                  priority: transactional
+                  body: Your access code is 123456.
+                  recipients:
+                    - '+15555550100'
+                    - '+15555550101'
       responses:
         '202':
           description: Notifications accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /notifications/{notification}:
     get:
+      tags: [Notifications]
       summary: Get notification status by public id
       parameters:
-        - name: notification
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/NotificationId'
       responses:
         '200':
           description: Notification status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
         '404':
-          description: Notification not found.
+          $ref: '#/components/responses/NotFound'
   /notifications/{notification}/delivery-status:
     post:
+      tags: [Notifications]
       summary: Confirm provider delivery status
       parameters:
-        - name: notification
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/NotificationId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [status]
-              properties:
-                status:
-                  type: string
-                  enum: [delivered, dropped]
-                error:
-                  type: string
-                  nullable: true
+              $ref: '#/components/schemas/ConfirmDeliveryRequest'
       responses:
         '200':
           description: Updated notification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
         '404':
-          description: Notification not found.
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /subscribers/{subscriber}/notifications:
     get:
+      tags: [Subscribers]
       summary: List subscriber notification history
       parameters:
         - name: subscriber
@@ -93,6 +144,199 @@ paths:
           required: true
           schema:
             type: string
+          example: customer@example.com
       responses:
         '200':
           description: Subscriber notification history.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+components:
+  parameters:
+    NotificationId:
+      name: notification
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 01973c2d-8fd7-4d68-9f81-262d2df6f3ad
+  responses:
+    NotFound:
+      description: Resource not found.
+    ValidationError:
+      description: Validation error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+  schemas:
+    CreateNotificationRequest:
+      type: object
+      required: [channel, recipient]
+      properties:
+        idempotency_key:
+          type: string
+          maxLength: 120
+          nullable: true
+        subscriber_id:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Defaults to recipient when omitted.
+        channel:
+          type: string
+          enum: [email, sms, push]
+        priority:
+          type: string
+          enum: [transactional, marketing]
+          default: marketing
+          nullable: true
+        recipient:
+          type: string
+          maxLength: 255
+        subject:
+          type: string
+          maxLength: 255
+          nullable: true
+        body:
+          type: string
+          maxLength: 5000
+          nullable: true
+          description: Required when payload is omitted.
+        payload:
+          type: object
+          nullable: true
+          additionalProperties: true
+    CreateBulkNotificationsRequest:
+      type: object
+      required: [channel, priority, body, recipients]
+      properties:
+        idempotency_key:
+          type: string
+          maxLength: 120
+          nullable: true
+        channel:
+          type: string
+          enum: [email, sms]
+        priority:
+          type: string
+          enum: [transactional, marketing]
+        subject:
+          type: string
+          maxLength: 255
+          nullable: true
+        body:
+          type: string
+          maxLength: 5000
+        message:
+          type: string
+          deprecated: true
+          description: Backward-compatible alias for body.
+        recipients:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          uniqueItems: true
+          items:
+            type: string
+            maxLength: 255
+    ConfirmDeliveryRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [delivered, dropped]
+        error:
+          type: string
+          maxLength: 5000
+          nullable: true
+    NotificationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Notification'
+    Notification:
+      type: object
+      required:
+        - id
+        - subscriber_id
+        - channel
+        - priority
+        - recipient
+        - status
+        - attempts
+        - queued_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        idempotency_key:
+          type: string
+          nullable: true
+        subscriber_id:
+          type: string
+        channel:
+          type: string
+          enum: [email, sms, push]
+        priority:
+          type: string
+          enum: [transactional, marketing]
+        recipient:
+          type: string
+        subject:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        payload:
+          type: object
+          nullable: true
+          additionalProperties: true
+        status:
+          type: string
+          enum: [queued, sent, delivered, dropped]
+        attempts:
+          type: integer
+          minimum: 0
+        queued_at:
+          type: string
+          format: date-time
+        processing_at:
+          type: string
+          format: date-time
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        dropped_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: string
+          nullable: true
