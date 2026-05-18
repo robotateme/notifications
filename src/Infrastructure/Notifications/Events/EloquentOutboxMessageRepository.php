@@ -7,6 +7,7 @@ use Application\Notifications\Outbox\PendingOutboxMessage;
 use Application\Notifications\Ports\OutboxMessageRepository;
 use Domain\Shared\DomainEvent;
 use Domain\Shared\Timestamp;
+use Illuminate\Support\Facades\DB;
 
 final class EloquentOutboxMessageRepository implements OutboxMessageRepository
 {
@@ -32,13 +33,47 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
 
     public function pending(int $limit): iterable
     {
+        $ids = DB::transaction(function () use ($limit): array {
+            $now = Timestamp::now();
+            $claimUntil = $now->plusSeconds(60);
+
+            $ids = OutboxMessage::query()
+                ->whereIn('status', [
+                    OutboxMessageStatus::Pending->value,
+                    OutboxMessageStatus::Failed->value,
+                    OutboxMessageStatus::Processing->value,
+                ])
+                ->where(fn ($query) => $query
+                    ->whereNull('available_at')
+                    ->orWhere('available_at', '<=', $now->toDatabaseString()))
+                ->orderBy('id')
+                ->limit($limit)
+                ->lock('FOR UPDATE SKIP LOCKED')
+                ->pluck('id')
+                ->all();
+
+            if ($ids === []) {
+                return [];
+            }
+
+            OutboxMessage::query()
+                ->whereKey($ids)
+                ->update([
+                    'status' => OutboxMessageStatus::Processing->value,
+                    'available_at' => $claimUntil->toDatabaseString(),
+                ]);
+
+            return $ids;
+        });
+
+        if ($ids === []) {
+            return [];
+        }
+
         return OutboxMessage::query()
-            ->whereIn('status', [OutboxMessageStatus::Pending->value, OutboxMessageStatus::Failed->value])
-            ->where(fn ($query) => $query
-                ->whereNull('available_at')
-                ->orWhere('available_at', '<=', Timestamp::now()->toDatabaseString()))
+            ->whereKey($ids)
+            ->where('status', OutboxMessageStatus::Processing->value)
             ->orderBy('id')
-            ->limit($limit)
             ->lazy()
             ->map(fn (OutboxMessage $message): PendingOutboxMessage => new PendingOutboxMessage(
                 id: $message->id,
@@ -52,10 +87,11 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
     {
         OutboxMessage::query()
             ->whereKey($id)
-            ->where('status', '!=', OutboxMessageStatus::Published->value)
+            ->where('status', OutboxMessageStatus::Processing->value)
             ->update([
                 'status' => OutboxMessageStatus::Published->value,
                 'published_at' => Timestamp::now()->toDatabaseString(),
+                'available_at' => null,
                 'last_error' => null,
             ]);
     }
