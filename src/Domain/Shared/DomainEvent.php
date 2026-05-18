@@ -2,15 +2,13 @@
 
 namespace Domain\Shared;
 
-use Illuminate\Support\Carbon;
-
 interface DomainEvent
 {
     public function eventId(): string;
 
     public function name(): string;
 
-    public function occurredAt(): Carbon;
+    public function occurredAt(): Timestamp;
 
     /**
      * @return array<string, mixed>

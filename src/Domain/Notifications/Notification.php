@@ -7,10 +7,10 @@ use Domain\Notifications\Events\NotificationDropped;
 use Domain\Notifications\Events\NotificationQueued;
 use Domain\Notifications\Events\NotificationSent;
 use Domain\Shared\DomainEvent;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
+use Domain\Shared\Timestamp;
+use Webmozart\Assert\Assert;
 
-class Notification
+final class Notification
 {
     /**
      * @var array<int, DomainEvent>
@@ -27,18 +27,19 @@ class Notification
         public string $recipient,
         public ?string $subject,
         public ?string $body,
-        public ?array $payload,
+        public ?NotificationPayload $payload,
         public NotificationStatus $status,
         public int $attempts,
-        public Carbon $queuedAt,
-        public ?Carbon $processingAt = null,
-        public ?Carbon $sentAt = null,
-        public ?Carbon $deliveredAt = null,
-        public ?Carbon $droppedAt = null,
+        public Timestamp $queuedAt,
+        public ?Timestamp $processingAt = null,
+        public ?Timestamp $sentAt = null,
+        public ?Timestamp $deliveredAt = null,
+        public ?Timestamp $droppedAt = null,
         public ?string $lastError = null,
     ) {}
 
     public static function queue(
+        string $id,
         ?string $idempotencyKey,
         string $subscriberId,
         NotificationChannel $channel,
@@ -48,9 +49,23 @@ class Notification
         ?string $body,
         ?array $payload,
     ): self {
+        Assert::notEmpty($subscriberId, 'Subscriber id is required.');
+        Assert::notEmpty($recipient, 'Recipient is required.');
+        Assert::true($body !== null || $payload !== null, 'Notification body or payload is required.');
+
+        if ($idempotencyKey !== null) {
+            Assert::notEmpty($idempotencyKey, 'Idempotency key must not be empty.');
+        }
+
+        if ($body !== null) {
+            Assert::notEmpty($body, 'Notification body must not be empty.');
+        }
+
+        $occurredAt = Timestamp::now();
+
         $notification = new self(
             internalId: null,
-            id: (string) Str::uuid(),
+            id: NotificationId::fromString($id)->value(),
             idempotencyKey: $idempotencyKey,
             subscriberId: $subscriberId,
             channel: $channel,
@@ -58,10 +73,10 @@ class Notification
             recipient: $recipient,
             subject: $subject,
             body: $body,
-            payload: $payload,
+            payload: NotificationPayload::fromNullableArray($payload),
             status: NotificationStatus::Queued,
             attempts: 0,
-            queuedAt: now(),
+            queuedAt: $occurredAt,
         );
 
         $notification->record(new NotificationQueued(
@@ -69,7 +84,7 @@ class Notification
             subscriberId: $notification->subscriberId,
             channel: $notification->channel,
             priority: $notification->priority,
-            occurredAt: now(),
+            occurredAt: $occurredAt,
         ));
 
         return $notification;
@@ -78,14 +93,16 @@ class Notification
     public function markProcessing(): void
     {
         $this->attempts++;
-        $this->processingAt = now();
+        $this->processingAt = Timestamp::now();
         $this->lastError = null;
     }
 
     public function markSent(): void
     {
+        $occurredAt = Timestamp::now();
+
         $this->status = NotificationStatus::Sent;
-        $this->sentAt = now();
+        $this->sentAt = $occurredAt;
         $this->droppedAt = null;
         $this->lastError = null;
 
@@ -93,21 +110,23 @@ class Notification
             notificationId: $this->id,
             subscriberId: $this->subscriberId,
             channel: $this->channel,
-            occurredAt: now(),
+            occurredAt: $occurredAt,
         ));
     }
 
     public function markDelivered(): void
     {
+        $occurredAt = Timestamp::now();
+
         $this->status = NotificationStatus::Delivered;
-        $this->deliveredAt = now();
+        $this->deliveredAt = $occurredAt;
         $this->droppedAt = null;
         $this->lastError = null;
 
         $this->record(new NotificationDelivered(
             notificationId: $this->id,
             subscriberId: $this->subscriberId,
-            occurredAt: now(),
+            occurredAt: $occurredAt,
         ));
     }
 
@@ -119,14 +138,15 @@ class Notification
     public function markDropped(string $error): void
     {
         $this->status = NotificationStatus::Dropped;
-        $this->droppedAt = now();
+        $occurredAt = Timestamp::now();
+        $this->droppedAt = $occurredAt;
         $this->lastError = $error;
 
         $this->record(new NotificationDropped(
             notificationId: $this->id,
             subscriberId: $this->subscriberId,
             reason: $error,
-            occurredAt: now(),
+            occurredAt: $occurredAt,
         ));
     }
 

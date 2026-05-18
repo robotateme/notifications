@@ -3,14 +3,14 @@
 namespace Domain\Notifications\Events;
 
 use Domain\Shared\DomainEvent;
-use Illuminate\Support\Carbon;
+use Domain\Shared\Timestamp;
 
-readonly class NotificationDelivered implements DomainEvent
+final readonly class NotificationDelivered implements DomainEvent
 {
     public function __construct(
         public string $notificationId,
         public string $subscriberId,
-        private Carbon $occurredAt,
+        private Timestamp $occurredAt,
     ) {}
 
     public function eventId(): string
@@ -23,7 +23,7 @@ readonly class NotificationDelivered implements DomainEvent
         return 'notification.delivered';
     }
 
-    public function occurredAt(): Carbon
+    public function occurredAt(): Timestamp
     {
         return $this->occurredAt;
     }

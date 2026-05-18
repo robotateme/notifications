@@ -5,16 +5,16 @@ namespace Domain\Notifications\Events;
 use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
 use Domain\Shared\DomainEvent;
-use Illuminate\Support\Carbon;
+use Domain\Shared\Timestamp;
 
-readonly class NotificationQueued implements DomainEvent
+final readonly class NotificationQueued implements DomainEvent
 {
     public function __construct(
         public string $notificationId,
         public string $subscriberId,
         public NotificationChannel $channel,
         public NotificationPriority $priority,
-        private Carbon $occurredAt,
+        private Timestamp $occurredAt,
     ) {}
 
     public function eventId(): string
@@ -27,7 +27,7 @@ readonly class NotificationQueued implements DomainEvent
         return 'notification.queued';
     }
 
-    public function occurredAt(): Carbon
+    public function occurredAt(): Timestamp
     {
         return $this->occurredAt;
     }
