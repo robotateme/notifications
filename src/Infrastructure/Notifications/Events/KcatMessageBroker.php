@@ -6,7 +6,7 @@ use Application\Notifications\Ports\MessageBroker;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
-class KcatMessageBroker implements MessageBroker
+final class KcatMessageBroker implements MessageBroker
 {
     public function publish(string $topic, string $key, array $payload): void
     {

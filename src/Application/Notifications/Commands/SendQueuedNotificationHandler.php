@@ -8,7 +8,7 @@ use Application\Notifications\Ports\NotificationRepository;
 use Domain\Notifications\Notification;
 use Throwable;
 
-class SendQueuedNotificationHandler
+final class SendQueuedNotificationHandler
 {
     public function __construct(
         private readonly NotificationRepository $notifications,

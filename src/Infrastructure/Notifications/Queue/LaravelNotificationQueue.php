@@ -7,7 +7,7 @@ use Application\Notifications\Ports\NotificationQueue;
 use Domain\Notifications\Notification;
 use LogicException;
 
-class LaravelNotificationQueue implements NotificationQueue
+final class LaravelNotificationQueue implements NotificationQueue
 {
     public function enqueue(Notification $notification): void
     {

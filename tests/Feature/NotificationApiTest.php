@@ -4,11 +4,16 @@ namespace Tests\Feature;
 
 use App\Jobs\SendNotificationJob;
 use App\Models\NotificationMessage;
+use Domain\Notifications\NotificationChannel;
+use Domain\Notifications\NotificationPriority;
+use Domain\Notifications\NotificationStatus;
+use Domain\Shared\Timestamp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Infrastructure\Notifications\Identity\UuidNotificationIdGenerator;
 use Tests\TestCase;
 
-class NotificationApiTest extends TestCase
+final class NotificationApiTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -30,8 +35,8 @@ class NotificationApiTest extends TestCase
             ->assertJsonPath('data.idempotency_key', 'order-1001-email')
             ->assertJsonPath('data.subscriber_id', 'customer@example.com')
             ->assertJsonPath('data.channel', 'email')
-            ->assertJsonPath('data.priority', NotificationMessage::PRIORITY_MARKETING)
-            ->assertJsonPath('data.status', NotificationMessage::STATUS_QUEUED);
+            ->assertJsonPath('data.priority', NotificationPriority::Marketing->value)
+            ->assertJsonPath('data.status', NotificationStatus::Queued->value);
 
         $message = NotificationMessage::query()->firstOrFail();
 
@@ -67,15 +72,20 @@ class NotificationApiTest extends TestCase
     public function test_notification_can_be_fetched_by_public_id(): void
     {
         $message = NotificationMessage::query()->create([
-            'channel' => NotificationMessage::CHANNEL_SMS,
+            'uuid' => self::notificationId(),
+            'subscriber_id' => '+15555550100',
+            'channel' => NotificationChannel::Sms->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => '+15555550100',
             'body' => 'Code: 123456',
+            'status' => NotificationStatus::Queued->value,
+            'queued_at' => Timestamp::now(),
         ]);
 
         $this->getJson("/api/notifications/{$message->uuid}")
             ->assertOk()
             ->assertJsonPath('data.id', $message->uuid)
-            ->assertJsonPath('data.channel', NotificationMessage::CHANNEL_SMS);
+            ->assertJsonPath('data.channel', NotificationChannel::Sms->value);
     }
 
     public function test_notification_request_is_validated(): void
@@ -110,8 +120,8 @@ class NotificationApiTest extends TestCase
         $response
             ->assertAccepted()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.status', NotificationMessage::STATUS_QUEUED)
-            ->assertJsonPath('data.0.priority', NotificationMessage::PRIORITY_MARKETING);
+            ->assertJsonPath('data.0.status', NotificationStatus::Queued->value)
+            ->assertJsonPath('data.0.priority', NotificationPriority::Marketing->value);
 
         $this->assertSame(2, NotificationMessage::query()->count());
         Queue::assertPushed(SendNotificationJob::class, 2);
@@ -134,10 +144,10 @@ class NotificationApiTest extends TestCase
         $response
             ->assertAccepted()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.status', NotificationMessage::STATUS_QUEUED)
-            ->assertJsonPath('data.0.priority', NotificationMessage::PRIORITY_TRANSACTIONAL);
+            ->assertJsonPath('data.0.status', NotificationStatus::Queued->value)
+            ->assertJsonPath('data.0.priority', NotificationPriority::Transactional->value);
 
-        $this->assertSame(2, NotificationMessage::query()->where('status', NotificationMessage::STATUS_QUEUED)->count());
+        $this->assertSame(2, NotificationMessage::query()->where('status', NotificationStatus::Queued->value)->count());
         Queue::assertPushedOn('notifications-high', SendNotificationJob::class);
         Queue::assertPushed(SendNotificationJob::class, 2);
     }
@@ -145,50 +155,63 @@ class NotificationApiTest extends TestCase
     public function test_delivery_status_can_be_confirmed(): void
     {
         $message = NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
             'subscriber_id' => 'customer-1',
-            'channel' => NotificationMessage::CHANNEL_EMAIL,
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => 'customer@example.com',
             'body' => 'Hello.',
-            'status' => NotificationMessage::STATUS_SENT,
-            'sent_at' => now(),
+            'status' => NotificationStatus::Sent->value,
+            'queued_at' => Timestamp::now(),
+            'sent_at' => Timestamp::now(),
         ]);
 
         $this->postJson("/api/notifications/{$message->uuid}/delivery-status", [
             'status' => 'delivered',
         ])
             ->assertOk()
-            ->assertJsonPath('data.status', NotificationMessage::STATUS_DELIVERED);
+            ->assertJsonPath('data.status', NotificationStatus::Delivered->value);
 
-        $this->assertSame(NotificationMessage::STATUS_DELIVERED, $message->refresh()->status);
+        $this->assertSame(NotificationStatus::Delivered->value, $message->refresh()->status);
         $this->assertNotNull($message->delivered_at);
     }
 
     public function test_subscriber_notification_history_is_returned(): void
     {
         NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
             'subscriber_id' => 'subscriber-1',
-            'channel' => NotificationMessage::CHANNEL_EMAIL,
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => 'first@example.com',
             'body' => 'First.',
-            'status' => NotificationMessage::STATUS_DELIVERED,
-            'delivered_at' => now(),
+            'status' => NotificationStatus::Delivered->value,
+            'queued_at' => Timestamp::now(),
+            'delivered_at' => Timestamp::now(),
         ]);
 
         NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
             'subscriber_id' => 'subscriber-1',
-            'channel' => NotificationMessage::CHANNEL_SMS,
+            'channel' => NotificationChannel::Sms->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => '+15555550100',
             'body' => 'Second.',
-            'status' => NotificationMessage::STATUS_DROPPED,
-            'dropped_at' => now(),
+            'status' => NotificationStatus::Dropped->value,
+            'queued_at' => Timestamp::now(),
+            'dropped_at' => Timestamp::now(),
             'last_error' => 'Invalid phone number.',
         ]);
 
         NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
             'subscriber_id' => 'subscriber-2',
-            'channel' => NotificationMessage::CHANNEL_EMAIL,
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => 'other@example.com',
             'body' => 'Other.',
+            'status' => NotificationStatus::Queued->value,
+            'queued_at' => Timestamp::now(),
         ]);
 
         $this->getJson('/api/subscribers/subscriber-1/notifications')
@@ -196,5 +219,10 @@ class NotificationApiTest extends TestCase
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.subscriber_id', 'subscriber-1')
             ->assertJsonPath('data.1.subscriber_id', 'subscriber-1');
+    }
+
+    private static function notificationId(): string
+    {
+        return (new UuidNotificationIdGenerator())->generate();
     }
 }

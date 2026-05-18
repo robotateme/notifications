@@ -8,13 +8,19 @@ use App\Models\OutboxMessage;
 use Application\Notifications\Commands\SendQueuedNotificationHandler;
 use Application\Notifications\Ports\MessageBroker;
 use Application\Notifications\Ports\NotificationDeliveryGateway;
+use Domain\Notifications\NotificationChannel;
+use Domain\Notifications\NotificationPriority;
+use Domain\Notifications\NotificationStatus;
+use Domain\Shared\Timestamp;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Infrastructure\Notifications\Events\OutboxMessageStatus;
+use Infrastructure\Notifications\Identity\UuidNotificationIdGenerator;
 use Mockery;
 use Tests\TestCase;
 
-class NotificationDeliveryIntegrationTest extends TestCase
+final class NotificationDeliveryIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -26,14 +32,14 @@ class NotificationDeliveryIntegrationTest extends TestCase
 
         $response = $this->postJson('/api/notifications/bulk', [
             'channel' => 'email',
-            'priority' => 'marketing',
+            'priority' => NotificationPriority::Marketing->value,
             'message' => 'Service window starts tonight.',
             'recipients' => ['subscriber@example.com'],
         ]);
 
         $response
             ->assertAccepted()
-            ->assertJsonPath('data.0.status', NotificationMessage::STATUS_QUEUED);
+            ->assertJsonPath('data.0.status', NotificationStatus::Queued->value);
 
         $this->assertSame(1, DB::table('jobs')->count());
         $this->assertSame(1, OutboxMessage::query()->where('event_name', 'notification.queued')->count());
@@ -46,7 +52,7 @@ class NotificationDeliveryIntegrationTest extends TestCase
 
         $message = NotificationMessage::query()->firstOrFail();
 
-        $this->assertSame(NotificationMessage::STATUS_SENT, $message->status);
+        $this->assertSame(NotificationStatus::Sent->value, $message->status);
         $this->assertSame(1, $message->attempts);
         $this->assertNotNull($message->processing_at);
         $this->assertNotNull($message->sent_at);
@@ -57,7 +63,7 @@ class NotificationDeliveryIntegrationTest extends TestCase
     {
         $this->postJson('/api/notifications/bulk', [
             'channel' => 'email',
-            'priority' => 'marketing',
+            'priority' => NotificationPriority::Marketing->value,
             'message' => 'Service window starts tonight.',
             'recipients' => ['subscriber@example.com'],
         ])->assertAccepted();
@@ -70,7 +76,7 @@ class NotificationDeliveryIntegrationTest extends TestCase
             ->expectsOutput('Published 1 outbox message(s).')
             ->assertExitCode(0);
 
-        $this->assertSame(OutboxMessage::STATUS_PUBLISHED, OutboxMessage::query()->firstOrFail()->status);
+        $this->assertSame(OutboxMessageStatus::Published->value, OutboxMessage::query()->firstOrFail()->status);
 
         $broker = Mockery::mock(MessageBroker::class);
         $broker->shouldNotReceive('publish');
@@ -84,12 +90,15 @@ class NotificationDeliveryIntegrationTest extends TestCase
     public function test_duplicate_job_does_not_call_provider_after_message_was_sent(): void
     {
         $message = NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
             'subscriber_id' => 'subscriber@example.com',
-            'channel' => NotificationMessage::CHANNEL_EMAIL,
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => 'subscriber@example.com',
             'body' => 'Hello.',
-            'status' => NotificationMessage::STATUS_SENT,
-            'sent_at' => now(),
+            'status' => NotificationStatus::Sent->value,
+            'queued_at' => Timestamp::now(),
+            'sent_at' => Timestamp::now(),
         ]);
 
         $delivery = Mockery::mock(NotificationDeliveryGateway::class);
@@ -98,17 +107,21 @@ class NotificationDeliveryIntegrationTest extends TestCase
 
         (new SendNotificationJob($message->id))->handle($this->app->make(SendQueuedNotificationHandler::class));
 
-        $this->assertSame(NotificationMessage::STATUS_SENT, $message->refresh()->status);
+        $this->assertSame(NotificationStatus::Sent->value, $message->refresh()->status);
         $this->assertSame(0, $message->attempts);
     }
 
     public function test_failed_attempt_is_retryable_and_next_attempt_can_send_message(): void
     {
         $message = NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
             'subscriber_id' => 'subscriber@example.com',
-            'channel' => NotificationMessage::CHANNEL_EMAIL,
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
             'recipient' => 'subscriber@example.com',
             'body' => 'Hello.',
+            'status' => NotificationStatus::Queued->value,
+            'queued_at' => Timestamp::now(),
         ]);
 
         $delivery = Mockery::mock(NotificationDeliveryGateway::class);
@@ -124,7 +137,7 @@ class NotificationDeliveryIntegrationTest extends TestCase
 
         $message->refresh();
 
-        $this->assertSame(NotificationMessage::STATUS_QUEUED, $message->status);
+        $this->assertSame(NotificationStatus::Queued->value, $message->status);
         $this->assertSame(1, $message->attempts);
         $this->assertSame('Gateway timeout.', $message->last_error);
 
@@ -136,8 +149,13 @@ class NotificationDeliveryIntegrationTest extends TestCase
 
         $message->refresh();
 
-        $this->assertSame(NotificationMessage::STATUS_SENT, $message->status);
+        $this->assertSame(NotificationStatus::Sent->value, $message->status);
         $this->assertSame(2, $message->attempts);
         $this->assertNull($message->last_error);
+    }
+
+    private static function notificationId(): string
+    {
+        return (new UuidNotificationIdGenerator())->generate();
     }
 }

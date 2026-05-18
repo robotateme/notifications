@@ -4,7 +4,7 @@ namespace Application\Notifications;
 
 use Domain\Notifications\Notification;
 
-class NotificationPresenter
+final class NotificationPresenter
 {
     /**
      * @return array<string, mixed>
@@ -20,14 +20,14 @@ class NotificationPresenter
             'recipient' => $notification->recipient,
             'subject' => $notification->subject,
             'body' => $notification->body,
-            'payload' => $notification->payload,
+            'payload' => $notification->payload?->toArray(),
             'status' => $notification->status->value,
             'attempts' => $notification->attempts,
-            'queued_at' => $notification->queuedAt->toISOString(),
-            'processing_at' => $notification->processingAt?->toISOString(),
-            'sent_at' => $notification->sentAt?->toISOString(),
-            'delivered_at' => $notification->deliveredAt?->toISOString(),
-            'dropped_at' => $notification->droppedAt?->toISOString(),
+            'queued_at' => $notification->queuedAt->toAtom(),
+            'processing_at' => $notification->processingAt?->toAtom(),
+            'sent_at' => $notification->sentAt?->toAtom(),
+            'delivered_at' => $notification->deliveredAt?->toAtom(),
+            'dropped_at' => $notification->droppedAt?->toAtom(),
             'last_error' => $notification->lastError,
         ];
     }

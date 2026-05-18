@@ -7,7 +7,7 @@ use Application\Notifications\Ports\NotificationRepository;
 use Domain\Notifications\Notification;
 use Domain\Notifications\NotificationStatus;
 
-class ConfirmNotificationDeliveryHandler
+final class ConfirmNotificationDeliveryHandler
 {
     public function __construct(
         private readonly NotificationRepository $notifications,

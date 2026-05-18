@@ -6,16 +6,27 @@ use Application\Notifications\Ports\NotificationDeliveryGateway;
 use Domain\Notifications\Notification;
 use Domain\Notifications\NotificationChannel;
 use Illuminate\Support\Facades\Log;
-use InvalidArgumentException;
+use Webmozart\Assert\Assert;
 
-class LogNotificationDeliveryGateway implements NotificationDeliveryGateway
+final class LogNotificationDeliveryGateway implements NotificationDeliveryGateway
 {
     public function send(Notification $notification): void
     {
         match ($notification->channel) {
-            NotificationChannel::Email => $this->assertEmail($notification->recipient),
-            NotificationChannel::Sms => $this->assertPhone($notification->recipient),
-            NotificationChannel::Push => $this->assertDeviceToken($notification->recipient),
+            NotificationChannel::Email => Assert::email(
+                $notification->recipient,
+                'Email recipient must be a valid email address.',
+            ),
+            NotificationChannel::Sms => Assert::regex(
+                $notification->recipient,
+                '/^\+[1-9]\d{7,14}$/',
+                'SMS recipient must be an E.164 phone number.',
+            ),
+            NotificationChannel::Push => Assert::minLength(
+                $notification->recipient,
+                10,
+                'Push recipient must be a device token.',
+            ),
         };
 
         Log::info('Notification delivered.', [
@@ -23,26 +34,5 @@ class LogNotificationDeliveryGateway implements NotificationDeliveryGateway
             'channel' => $notification->channel->value,
             'recipient' => $notification->recipient,
         ]);
-    }
-
-    private function assertEmail(string $recipient): void
-    {
-        if (! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
-            throw new InvalidArgumentException('Email recipient must be a valid email address.');
-        }
-    }
-
-    private function assertPhone(string $recipient): void
-    {
-        if (! preg_match('/^\+[1-9]\d{7,14}$/', $recipient)) {
-            throw new InvalidArgumentException('SMS recipient must be an E.164 phone number.');
-        }
-    }
-
-    private function assertDeviceToken(string $recipient): void
-    {
-        if (strlen($recipient) < 10) {
-            throw new InvalidArgumentException('Push recipient must be a device token.');
-        }
     }
 }

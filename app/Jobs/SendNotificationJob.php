@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
-class SendNotificationJob implements ShouldQueue
+final class SendNotificationJob implements ShouldQueue
 {
     use Queueable;
 

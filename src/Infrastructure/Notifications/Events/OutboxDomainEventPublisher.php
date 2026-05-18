@@ -6,7 +6,7 @@ use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\OutboxMessageRepository;
 use Domain\Shared\DomainEvent;
 
-class OutboxDomainEventPublisher implements DomainEventPublisher
+final class OutboxDomainEventPublisher implements DomainEventPublisher
 {
     public function __construct(private readonly OutboxMessageRepository $outbox) {}
 

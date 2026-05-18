@@ -4,20 +4,25 @@ namespace Application\Notifications\Commands;
 
 use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\IdempotencyGuard;
+use Application\Notifications\Ports\NotificationIdGenerator;
 use Application\Notifications\Ports\NotificationQueue;
 use Application\Notifications\Ports\NotificationRepository;
 use Domain\Notifications\Notification;
 
-class CreateBulkNotificationsHandler
+final class CreateBulkNotificationsHandler
 {
     public function __construct(
         private readonly NotificationRepository $notifications,
         private readonly NotificationQueue $queue,
         private readonly DomainEventPublisher $events,
         private readonly IdempotencyGuard $idempotency,
+        private readonly NotificationIdGenerator $ids,
     ) {}
 
-    public function handle(CreateBulkNotificationsCommand $command): CreateBulkNotificationsResult
+    /**
+     * @return array<int, Notification>
+     */
+    public function handle(CreateBulkNotificationsCommand $command): array
     {
         $created = [];
 
@@ -34,7 +39,7 @@ class CreateBulkNotificationsHandler
                 );
         }
 
-        return new CreateBulkNotificationsResult($created);
+        return $created;
     }
 
     private function createOne(
@@ -51,6 +56,7 @@ class CreateBulkNotificationsHandler
         }
 
         $notification = Notification::queue(
+            id: $this->ids->generate(),
             idempotencyKey: $idempotencyKey,
             subscriberId: $recipient,
             channel: $command->channel,

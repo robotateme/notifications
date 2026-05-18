@@ -6,7 +6,7 @@ use Application\Notifications\Ports\IdempotencyGuard;
 use Closure;
 use Illuminate\Support\Facades\Cache;
 
-class CacheIdempotencyGuard implements IdempotencyGuard
+final class CacheIdempotencyGuard implements IdempotencyGuard
 {
     public function run(string $key, Closure $callback): mixed
     {

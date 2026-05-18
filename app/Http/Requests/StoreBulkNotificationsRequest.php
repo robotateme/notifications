@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests;
 
+use Application\Notifications\Commands\CreateBulkNotificationsCommand;
 use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreBulkNotificationsRequest extends FormRequest
+final class StoreBulkNotificationsRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
@@ -50,5 +51,27 @@ class StoreBulkNotificationsRequest extends FormRequest
             'recipients' => ['required', 'array', 'min:1', 'max:1000'],
             'recipients.*' => ['required', 'string', 'distinct', 'max:255'],
         ];
+    }
+
+    public function toCommand(): CreateBulkNotificationsCommand
+    {
+        /** @var array<int, string> $recipients */
+        $recipients = array_values($this->validated('recipients'));
+
+        return new CreateBulkNotificationsCommand(
+            channel: NotificationChannel::from((string) $this->validated('channel')),
+            priority: NotificationPriority::from((string) $this->validated('priority')),
+            body: (string) $this->validated('body'),
+            recipients: $recipients,
+            subject: $this->optionalString('subject'),
+            idempotencyKey: $this->optionalString('idempotency_key'),
+        );
+    }
+
+    private function optionalString(string $key): ?string
+    {
+        $value = $this->validated($key, null);
+
+        return is_string($value) ? $value : null;
     }
 }

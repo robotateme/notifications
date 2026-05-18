@@ -6,7 +6,7 @@ use Application\Notifications\Ports\MessageBroker;
 use Application\Notifications\Ports\OutboxMessageRepository;
 use Throwable;
 
-class PublishOutboxMessagesHandler
+final class PublishOutboxMessagesHandler
 {
     public function __construct(
         private readonly OutboxMessageRepository $outbox,
