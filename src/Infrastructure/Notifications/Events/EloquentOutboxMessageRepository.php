@@ -5,9 +5,9 @@ namespace Infrastructure\Notifications\Events;
 use App\Models\OutboxMessage;
 use Application\Notifications\Ports\OutboxMessageRepository;
 use Domain\Shared\DomainEvent;
-use Illuminate\Support\Carbon;
+use Domain\Shared\Timestamp;
 
-class EloquentOutboxMessageRepository implements OutboxMessageRepository
+final class EloquentOutboxMessageRepository implements OutboxMessageRepository
 {
     public function add(DomainEvent $event, string $topic): void
     {
@@ -20,42 +20,41 @@ class EloquentOutboxMessageRepository implements OutboxMessageRepository
                 'payload' => [
                     'event_id' => $event->eventId(),
                     'event_name' => $event->name(),
-                    'occurred_at' => $event->occurredAt()->toISOString(),
+                    'occurred_at' => $event->occurredAt()->toAtom(),
                     'data' => $event->payload(),
                 ],
-                'status' => OutboxMessage::STATUS_PENDING,
-                'available_at' => now(),
+                'status' => OutboxMessageStatus::Pending->value,
+                'available_at' => Timestamp::now(),
             ],
         );
     }
 
-    public function pending(int $limit): array
+    public function pending(int $limit): iterable
     {
         return OutboxMessage::query()
-            ->whereIn('status', [OutboxMessage::STATUS_PENDING, OutboxMessage::STATUS_FAILED])
+            ->whereIn('status', [OutboxMessageStatus::Pending->value, OutboxMessageStatus::Failed->value])
             ->where(fn ($query) => $query
                 ->whereNull('available_at')
-                ->orWhere('available_at', '<=', now()))
+                ->orWhere('available_at', '<=', Timestamp::now()->toDatabaseString()))
             ->orderBy('id')
             ->limit($limit)
-            ->get()
+            ->lazy()
             ->map(fn (OutboxMessage $message): array => [
                 'id' => $message->id,
                 'topic' => $message->topic,
                 'aggregate_id' => $message->aggregate_id,
                 'payload' => $message->payload,
-            ])
-            ->all();
+            ]);
     }
 
     public function markPublished(int $id): void
     {
         OutboxMessage::query()
             ->whereKey($id)
-            ->where('status', '!=', OutboxMessage::STATUS_PUBLISHED)
+            ->where('status', '!=', OutboxMessageStatus::Published->value)
             ->update([
-                'status' => OutboxMessage::STATUS_PUBLISHED,
-                'published_at' => now(),
+                'status' => OutboxMessageStatus::Published->value,
+                'published_at' => Timestamp::now()->toDatabaseString(),
                 'last_error' => null,
             ]);
     }
@@ -66,9 +65,9 @@ class EloquentOutboxMessageRepository implements OutboxMessageRepository
         $attempts = $message->attempts + 1;
 
         $message->forceFill([
-            'status' => OutboxMessage::STATUS_FAILED,
+            'status' => OutboxMessageStatus::Failed->value,
             'attempts' => $attempts,
-            'available_at' => Carbon::now()->addSeconds(min(300, 10 * $attempts)),
+            'available_at' => Timestamp::now()->plusSeconds(min(300, 10 * $attempts)),
             'last_error' => $error,
         ])->save();
     }

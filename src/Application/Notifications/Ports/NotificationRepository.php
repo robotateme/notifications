@@ -13,9 +13,9 @@ interface NotificationRepository
     public function findByIdempotencyKey(string $idempotencyKey): ?Notification;
 
     /**
-     * @return array<int, Notification>
+     * @return iterable<int, Notification>
      */
-    public function findBySubscriberId(string $subscriberId): array;
+    public function findBySubscriberId(string $subscriberId): iterable;
 
     public function add(Notification $notification): Notification;
 

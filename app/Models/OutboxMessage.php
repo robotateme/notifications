@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
 
 #[Fillable([
     'event_id',
@@ -19,18 +20,12 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class OutboxMessage extends Model
 {
-    public const STATUS_PENDING = 'pending';
-
-    public const STATUS_PUBLISHED = 'published';
-
-    public const STATUS_FAILED = 'failed';
-
     protected function casts(): array
     {
         return [
             'payload' => 'array',
-            'available_at' => 'datetime',
-            'published_at' => 'datetime',
+            'available_at' => TimestampCast::class,
+            'published_at' => TimestampCast::class,
         ];
     }
 }
