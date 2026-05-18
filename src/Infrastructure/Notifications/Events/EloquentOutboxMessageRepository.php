@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 final class EloquentOutboxMessageRepository implements OutboxMessageRepository
 {
+    private const MAX_ATTEMPTS = 5;
+
     public function add(DomainEvent $event, string $topic): void
     {
         OutboxMessage::query()->firstOrCreate(
@@ -100,11 +102,12 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
     {
         $message = OutboxMessage::query()->findOrFail($id);
         $attempts = $message->attempts + 1;
+        $isDead = $attempts >= self::MAX_ATTEMPTS;
 
         $message->forceFill([
-            'status' => OutboxMessageStatus::Failed->value,
+            'status' => $isDead ? OutboxMessageStatus::Dead->value : OutboxMessageStatus::Failed->value,
             'attempts' => $attempts,
-            'available_at' => Timestamp::now()->plusSeconds(min(300, 10 * $attempts)),
+            'available_at' => $isDead ? null : Timestamp::now()->plusSeconds(min(300, 10 * $attempts)),
             'last_error' => $error,
         ])->save();
     }

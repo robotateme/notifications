@@ -8,4 +8,5 @@ enum OutboxMessageStatus: string
     case Processing = 'processing';
     case Published = 'published';
     case Failed = 'failed';
+    case Dead = 'dead';
 }
