@@ -3,6 +3,7 @@
 namespace Infrastructure\Notifications\Events;
 
 use App\Models\OutboxMessage;
+use Application\Notifications\Outbox\PendingOutboxMessage;
 use Application\Notifications\Ports\OutboxMessageRepository;
 use Domain\Shared\DomainEvent;
 use Domain\Shared\Timestamp;
@@ -39,12 +40,12 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
             ->orderBy('id')
             ->limit($limit)
             ->lazy()
-            ->map(fn (OutboxMessage $message): array => [
-                'id' => $message->id,
-                'topic' => $message->topic,
-                'aggregate_id' => $message->aggregate_id,
-                'payload' => $message->payload,
-            ]);
+            ->map(fn (OutboxMessage $message): PendingOutboxMessage => new PendingOutboxMessage(
+                id: $message->id,
+                topic: $message->topic,
+                aggregateId: $message->aggregate_id,
+                payload: $message->payload,
+            ));
     }
 
     public function markPublished(int $id): void

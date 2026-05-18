@@ -1,6 +1,6 @@
 <?php
 
-namespace Application\Notifications;
+namespace App\Http\Presenters;
 
 use Domain\Notifications\Notification;
 

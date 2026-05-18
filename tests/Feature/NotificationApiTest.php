@@ -42,7 +42,7 @@ final class NotificationApiTest extends TestCase
 
         Queue::assertPushed(
             SendNotificationJob::class,
-            fn (SendNotificationJob $job): bool => $job->notificationMessageId === $message->id
+            fn (SendNotificationJob $job): bool => $job->notificationId === $message->uuid
         );
     }
 

@@ -16,9 +16,13 @@ final class SendQueuedNotificationHandler
         private readonly DomainEventPublisher $events,
     ) {}
 
-    public function handle(int $notificationId, bool $rethrow = true, bool $dropOnFailure = false): void
+    public function handle(string $notificationId, bool $rethrow = true, bool $dropOnFailure = false): void
     {
-        $notification = $this->notifications->get($notificationId);
+        $notification = $this->notifications->findByPublicId($notificationId);
+
+        if ($notification === null) {
+            return;
+        }
 
         if ($notification->wasSent()) {
             return;

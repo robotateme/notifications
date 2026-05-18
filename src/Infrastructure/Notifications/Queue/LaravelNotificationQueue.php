@@ -4,19 +4,14 @@ namespace Infrastructure\Notifications\Queue;
 
 use App\Jobs\SendNotificationJob;
 use Application\Notifications\Ports\NotificationQueue;
-use Domain\Notifications\Notification;
-use LogicException;
+use Domain\Notifications\NotificationPriority;
 
 final class LaravelNotificationQueue implements NotificationQueue
 {
-    public function enqueue(Notification $notification): void
+    public function enqueue(string $notificationId, NotificationPriority $priority): void
     {
-        if ($notification->internalId === null) {
-            throw new LogicException('Notification must be persisted before enqueueing.');
-        }
+        $queue = $priority === NotificationPriority::Transactional ? 'notifications-high' : 'notifications';
 
-        $queue = $notification->isTransactional() ? 'notifications-high' : 'notifications';
-
-        SendNotificationJob::dispatch($notification->internalId)->onQueue($queue);
+        SendNotificationJob::dispatch($notificationId)->onQueue($queue);
     }
 }

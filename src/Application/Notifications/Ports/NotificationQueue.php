@@ -2,9 +2,9 @@
 
 namespace Application\Notifications\Ports;
 
-use Domain\Notifications\Notification;
+use Domain\Notifications\NotificationPriority;
 
 interface NotificationQueue
 {
-    public function enqueue(Notification $notification): void;
+    public function enqueue(string $notificationId, NotificationPriority $priority): void;
 }

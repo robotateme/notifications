@@ -105,7 +105,7 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         $delivery->shouldNotReceive('send');
         $this->app->instance(NotificationDeliveryGateway::class, $delivery);
 
-        (new SendNotificationJob($message->id))->handle($this->app->make(SendQueuedNotificationHandler::class));
+        (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
 
         $this->assertSame(NotificationStatus::Sent->value, $message->refresh()->status);
         $this->assertSame(0, $message->attempts);
@@ -129,7 +129,7 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         $this->app->instance(NotificationDeliveryGateway::class, $delivery);
 
         try {
-            (new SendNotificationJob($message->id))->handle($this->app->make(SendQueuedNotificationHandler::class));
+            (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
             $this->fail('Expected temporary gateway exception was not thrown.');
         } catch (Exception $exception) {
             $this->assertSame('Gateway timeout.', $exception->getMessage());
@@ -145,7 +145,7 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         $delivery->shouldReceive('send')->once();
         $this->app->instance(NotificationDeliveryGateway::class, $delivery);
 
-        (new SendNotificationJob($message->id))->handle($this->app->make(SendQueuedNotificationHandler::class));
+        (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
 
         $message->refresh();
 

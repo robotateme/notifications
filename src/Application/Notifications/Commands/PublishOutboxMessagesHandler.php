@@ -20,15 +20,15 @@ final class PublishOutboxMessagesHandler
         foreach ($this->outbox->pending($limit) as $message) {
             try {
                 $this->broker->publish(
-                    topic: $message['topic'],
-                    key: $message['aggregate_id'],
-                    payload: $message['payload'],
+                    topic: $message->topic,
+                    key: $message->aggregateId,
+                    payload: $message->payload,
                 );
 
-                $this->outbox->markPublished($message['id']);
+                $this->outbox->markPublished($message->id);
                 $published++;
             } catch (Throwable $exception) {
-                $this->outbox->markFailed($message['id'], $exception->getMessage());
+                $this->outbox->markFailed($message->id, $exception->getMessage());
             }
         }
 

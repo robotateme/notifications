@@ -9,8 +9,8 @@ use App\Http\Requests\StoreNotificationRequest;
 use Application\Notifications\Commands\ConfirmNotificationDeliveryHandler;
 use Application\Notifications\Commands\CreateBulkNotificationsHandler;
 use Application\Notifications\Commands\CreateNotificationHandler;
-use Application\Notifications\NotificationPresenter;
 use Application\Notifications\Ports\NotificationRepository;
+use App\Http\Presenters\NotificationPresenter;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 

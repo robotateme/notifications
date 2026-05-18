@@ -20,20 +20,24 @@ final class SendNotificationJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public readonly int $notificationMessageId) {}
+    public function __construct(public readonly string $notificationId) {}
 
     /**
      * Execute the job.
      */
     public function handle(SendQueuedNotificationHandler $handler): void
     {
-        $handler->handle($this->notificationMessageId);
+        $handler->handle($this->notificationId);
     }
 
     public function failed(Throwable $exception): void
     {
         $notifications = app(NotificationRepository::class);
-        $notification = $notifications->get($this->notificationMessageId);
+        $notification = $notifications->findByPublicId($this->notificationId);
+
+        if ($notification === null) {
+            return;
+        }
 
         if ($notification->wasSent()) {
             return;

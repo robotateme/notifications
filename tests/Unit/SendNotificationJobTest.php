@@ -37,7 +37,7 @@ final class SendNotificationJobTest extends TestCase
         $delivery->shouldReceive('send')->once();
         $this->app->instance(NotificationDeliveryGateway::class, $delivery);
 
-        (new SendNotificationJob($message->id))->handle($this->app->make(SendQueuedNotificationHandler::class));
+        (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
 
         $message->refresh();
 
@@ -69,7 +69,7 @@ final class SendNotificationJobTest extends TestCase
         $this->app->instance(NotificationDeliveryGateway::class, $delivery);
 
         try {
-            (new SendNotificationJob($message->id))->handle($this->app->make(SendQueuedNotificationHandler::class));
+            (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
             $this->fail('Expected delivery exception was not thrown.');
         } catch (Exception $exception) {
             $this->assertSame('Delivery provider rejected the message.', $exception->getMessage());
@@ -96,7 +96,7 @@ final class SendNotificationJobTest extends TestCase
             'queued_at' => Timestamp::now(),
         ]);
 
-        (new SendNotificationJob($message->id))->failed(new Exception('Retries exhausted.'));
+        (new SendNotificationJob($message->uuid))->failed(new Exception('Retries exhausted.'));
 
         $message->refresh();
 

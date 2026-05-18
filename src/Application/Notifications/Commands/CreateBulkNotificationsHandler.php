@@ -74,7 +74,7 @@ final class CreateBulkNotificationsHandler
             $this->events->publish($event);
         }
 
-        $this->queue->enqueue($notification);
+        $this->queue->enqueue($notification->id, $notification->priority);
 
         return $notification;
     }
