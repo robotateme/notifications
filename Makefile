@@ -1,27 +1,31 @@
 DC := docker compose
 APP := laravel.test
 
-.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh test pint validate openapi outbox queue status
+.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi outbox queue status ps
 
 help:
 	@echo "Available commands:"
-	@echo "  make up          Start the full local stack"
-	@echo "  make down        Stop containers"
-	@echo "  make restart     Restart the stack"
-	@echo "  make logs        Follow all logs"
-	@echo "  make app-logs    Follow app logs"
-	@echo "  make queue-logs  Follow queue worker logs"
-	@echo "  make outbox-logs Follow outbox publisher logs"
-	@echo "  make shell       Open a shell in the app container"
-	@echo "  make install     Install Composer dependencies in container"
-	@echo "  make migrate     Run migrations"
-	@echo "  make fresh       Recreate schema"
-	@echo "  make test        Run automated tests"
-	@echo "  make pint        Format PHP code"
-	@echo "  make validate    Validate composer.json and compose config"
-	@echo "  make outbox      Publish pending outbox messages once"
-	@echo "  make queue       Run queue worker in the foreground"
-	@echo "  make status      Show containers"
+	@echo "  make up           Start the full local stack"
+	@echo "  make down         Stop containers"
+	@echo "  make restart      Restart the stack"
+	@echo "  make logs         Follow all logs"
+	@echo "  make app-logs     Follow app logs"
+	@echo "  make queue-logs   Follow queue worker logs"
+	@echo "  make outbox-logs  Follow outbox publisher logs"
+	@echo "  make shell        Open a shell in the app container"
+	@echo "  make install      Install Composer dependencies in container"
+	@echo "  make migrate      Run migrations"
+	@echo "  make fresh        Recreate schema"
+	@echo "  make fresh-seed   Recreate schema and seed data"
+	@echo "  make test         Run automated tests"
+	@echo "  make test-unit    Run unit tests"
+	@echo "  make test-feature Run feature tests"
+	@echo "  make pint         Format PHP code"
+	@echo "  make validate     Validate composer.json, compose config and OpenAPI"
+	@echo "  make openapi      Validate docs/openapi.yaml"
+	@echo "  make outbox       Publish pending outbox messages once"
+	@echo "  make queue        Run queue worker in the foreground"
+	@echo "  make status       Show containers"
 
 up:
 	$(DC) up -d --build
@@ -57,18 +61,33 @@ migrate:
 fresh:
 	$(DC) exec $(APP) php artisan migrate:fresh
 
+fresh-seed:
+	$(DC) exec $(APP) php artisan migrate:fresh --seed
+
 test:
 	@$(DC) stop queue.worker outbox.publisher >/dev/null
 	@status=0; $(DC) exec $(APP) php artisan test || status=$$?; \
 	$(DC) start queue.worker outbox.publisher >/dev/null; \
 	exit $$status
 
+test-unit:
+	$(DC) exec $(APP) php artisan test tests/Unit
+
+test-feature:
+	@$(DC) stop queue.worker outbox.publisher >/dev/null
+	@status=0; $(DC) exec $(APP) php artisan test tests/Feature || status=$$?; \
+	$(DC) start queue.worker outbox.publisher >/dev/null; \
+	exit $$status
+
 pint:
 	$(DC) exec $(APP) ./vendor/bin/pint app src tests routes config database/migrations
 
-validate:
+validate: openapi
 	composer validate --strict --no-check-publish
 	$(DC) config --quiet
+
+openapi:
+	python3 -c "import yaml; yaml.safe_load(open('docs/openapi.yaml', encoding='utf-8'))"
 
 outbox:
 	$(DC) exec $(APP) php artisan outbox:publish --limit=100
@@ -78,3 +97,5 @@ queue:
 
 status:
 	$(DC) ps
+
+ps: status
