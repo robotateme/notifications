@@ -126,6 +126,56 @@ final class NotificationDeliveryIntegrationTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_dead_outbox_messages_can_be_listed_and_retried(): void
+    {
+        $message = OutboxMessage::query()->create([
+            'event_id' => 'event-1',
+            'topic' => 'notifications.events',
+            'event_name' => 'notification.queued',
+            'aggregate_id' => 'notification-1',
+            'payload' => ['event_id' => 'event-1'],
+            'status' => OutboxMessageStatus::Dead->value,
+            'attempts' => 5,
+            'last_error' => 'Kafka is unavailable.',
+        ]);
+
+        $this->artisan('outbox:dead', ['--limit' => 10])
+            ->expectsTable(
+                ['ID', 'Event ID', 'Topic', 'Event', 'Aggregate ID', 'Attempts', 'Last Error'],
+                [[
+                    $message->id,
+                    'event-1',
+                    'notifications.events',
+                    'notification.queued',
+                    'notification-1',
+                    5,
+                    'Kafka is unavailable.',
+                ]],
+            )
+            ->assertExitCode(0);
+
+        $this->artisan('outbox:retry-dead', ['id' => $message->id])
+            ->expectsOutput("Dead outbox message {$message->id} was returned to pending status.")
+            ->assertExitCode(0);
+
+        $message->refresh();
+
+        $this->assertSame(OutboxMessageStatus::Pending->value, $message->status);
+        $this->assertNotNull($message->available_at);
+        $this->assertNull($message->last_error);
+
+        $this->artisan('outbox:dead', ['--limit' => 10])
+            ->expectsOutput('No dead outbox messages.')
+            ->assertExitCode(0);
+    }
+
+    public function test_retry_dead_outbox_message_reports_missing_message(): void
+    {
+        $this->artisan('outbox:retry-dead', ['id' => 404])
+            ->expectsOutput('Dead outbox message 404 was not found.')
+            ->assertExitCode(1);
+    }
+
     public function test_duplicate_job_does_not_call_provider_after_message_was_sent(): void
     {
         $message = NotificationMessage::query()->create([

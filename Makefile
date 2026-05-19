@@ -1,7 +1,7 @@
 DC := docker compose
 APP := laravel.test
 
-.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi outbox queue status ps
+.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi outbox outbox-dead outbox-retry-dead queue status ps
 
 help:
 	@echo "Available commands:"
@@ -24,6 +24,8 @@ help:
 	@echo "  make validate     Validate composer.json, compose config and OpenAPI"
 	@echo "  make openapi      Validate docs/openapi.yaml"
 	@echo "  make outbox       Publish pending outbox messages once"
+	@echo "  make outbox-dead  List dead outbox messages"
+	@echo "  make outbox-retry-dead ID=1 Return a dead outbox message to pending"
 	@echo "  make queue        Run queue worker in the foreground"
 	@echo "  make status       Show containers"
 
@@ -91,6 +93,13 @@ openapi:
 
 outbox:
 	$(DC) exec $(APP) php artisan outbox:publish --limit=100
+
+outbox-dead:
+	$(DC) exec $(APP) php artisan outbox:dead --limit=50
+
+outbox-retry-dead:
+	@test -n "$(ID)" || (echo "Usage: make outbox-retry-dead ID=<outbox-id>" && exit 1)
+	$(DC) exec $(APP) php artisan outbox:retry-dead $(ID)
 
 queue:
 	$(DC) exec $(APP) php artisan queue:work --queue=notifications-high,notifications --tries=3

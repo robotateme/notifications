@@ -2,6 +2,7 @@
 
 namespace Application\Notifications\Ports;
 
+use Application\Notifications\Outbox\DeadOutboxMessage;
 use Application\Notifications\Outbox\PendingOutboxMessage;
 use Domain\Shared\DomainEvent;
 
@@ -17,4 +18,11 @@ interface OutboxMessageRepository
     public function markPublished(int $id): void;
 
     public function markFailed(int $id, string $error): void;
+
+    /**
+     * @return iterable<int, DeadOutboxMessage>
+     */
+    public function dead(int $limit): iterable;
+
+    public function retryDead(int $id): bool;
 }

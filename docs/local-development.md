@@ -60,6 +60,8 @@ make pint
 ```bash
 make queue
 make outbox
+make outbox-dead
+make outbox-retry-dead ID=1
 ```
 
 Остановка:

@@ -74,12 +74,20 @@ backoff = 10
 - больше не выбираются publisher-ом;
 - сохраняют `last_error`;
 - сохраняют количество `attempts`;
-- могут быть разобраны оператором вручную через БД/Kafka UI/логи.
+- могут быть просмотрены через `make outbox-dead`;
+- могут быть возвращены в retry flow через `make outbox-retry-dead ID=<outbox-id>`.
 
 Сценарий закреплен тестом:
 
 ```bash
 docker compose exec laravel.test php artisan test --filter=outbox_message_is_moved_to_dead_status_after_retry_limit
+```
+
+Операционные команды:
+
+```bash
+make outbox-dead
+make outbox-retry-dead ID=1
 ```
 
 ## Priority

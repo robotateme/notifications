@@ -3,6 +3,7 @@
 namespace Infrastructure\Notifications\Events;
 
 use App\Models\OutboxMessage;
+use Application\Notifications\Outbox\DeadOutboxMessage;
 use Application\Notifications\Outbox\PendingOutboxMessage;
 use Application\Notifications\Ports\OutboxMessageRepository;
 use Domain\Shared\DomainEvent;
@@ -110,5 +111,35 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
             'available_at' => $isDead ? null : Timestamp::now()->plusSeconds(min(300, 10 * $attempts)),
             'last_error' => $error,
         ])->save();
+    }
+
+    public function dead(int $limit): iterable
+    {
+        return OutboxMessage::query()
+            ->where('status', OutboxMessageStatus::Dead->value)
+            ->orderBy('id')
+            ->limit($limit)
+            ->lazy()
+            ->map(fn (OutboxMessage $message): DeadOutboxMessage => new DeadOutboxMessage(
+                id: $message->id,
+                eventId: $message->event_id,
+                topic: $message->topic,
+                eventName: $message->event_name,
+                aggregateId: $message->aggregate_id,
+                attempts: $message->attempts,
+                lastError: $message->last_error,
+            ));
+    }
+
+    public function retryDead(int $id): bool
+    {
+        return OutboxMessage::query()
+            ->whereKey($id)
+            ->where('status', OutboxMessageStatus::Dead->value)
+            ->update([
+                'status' => OutboxMessageStatus::Pending->value,
+                'available_at' => Timestamp::now()->toDatabaseString(),
+                'last_error' => null,
+            ]) === 1;
     }
 }
