@@ -1,77 +1,64 @@
 # Notification Service
 
-## Требования
+Микросервис уведомлений для массовой отправки Email/SMS/Push сообщений с приоритетами, идемпотентностью, outbox-публикацией событий в Kafka и отслеживанием статусов доставки.
+
+## Быстрый Старт
+
+Требования:
 
 - Docker и Docker Compose
 - Make
 
-## Запуск
+Запуск локального окружения:
 
 ```bash
 make up
 ```
 
-Приложение будет доступно на `http://localhost`.
-Kafka UI: `http://localhost:8081`.
+После старта:
 
-Стек поднимает приложение, PostgreSQL, Redis, Kafka, Kafka UI, queue worker и
-outbox publisher.
+- API: `http://localhost/api`
+- Kafka UI: `http://localhost:8081`
+- OpenAPI: [docs/openapi.yaml](docs/openapi.yaml)
 
-## Очередь уведомлений
-
-```bash
-make queue-logs
-```
-
-`transactional` уведомления попадают в `notifications-high`, `marketing` - в
-`notifications`.
-
-## Outbox publisher
+Проверка проекта:
 
 ```bash
-make outbox-logs
-```
-
-Outbox publisher публикует pending domain events из таблицы `outbox_messages`
-в Kafka через `kcat` внутри app-контейнера.
-
-Разовый запуск publisher:
-
-```bash
-make outbox
-```
-
-## Проверка API
-
-```bash
-curl -X POST http://localhost/api/notifications/bulk \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "idempotency_key": "campaign-42",
-    "channel": "email",
-    "priority": "marketing",
-    "message": "Service window starts tonight.",
-    "recipients": ["customer@example.com"]
-  }'
-```
-
-История уведомлений подписчика:
-
-```bash
-curl http://localhost/api/subscribers/customer@example.com/notifications
-```
-
-## API описание
-
-OpenAPI spec: `docs/openapi.yaml`.
-
-## Полезные команды
-
-```bash
-make status
-make logs
-make test
-make pint
 make validate
+make test
+```
+
+Остановка:
+
+```bash
 make down
 ```
+
+## Документация
+
+- [Локальный запуск и команды](docs/local-development.md)
+- [API и OpenAPI](docs/api.md)
+- [Архитектура](docs/architecture.md)
+- [Reliability, Outbox, DLQ](docs/reliability.md)
+
+## Основные Возможности
+
+- Массовая отправка Email/SMS уведомлений.
+- Single notification API для Email/SMS/Push.
+- Приоритетные очереди: `transactional` обгоняет `marketing`.
+- Статусы доставки: `queued`, `sent`, `delivered`, `dropped`.
+- История уведомлений по подписчику.
+- Idempotency key для защиты от повторного создания уведомлений.
+- Transactional outbox для публикации domain events в Kafka.
+- Retry, claim locking и dead-letter status для outbox.
+- Интеграционные и архитектурные тесты.
+
+## Стек
+
+- PHP 8.4
+- Laravel 13
+- PostgreSQL
+- Redis queue/cache locks
+- Apache Kafka
+- Kafka UI
+- Docker Compose
