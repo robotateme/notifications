@@ -22,6 +22,13 @@ Bulk notification:
 - внешний ключ расширяется до per-recipient ключа;
 - повтор bulk-запроса не создает дубликаты по получателям.
 
+Incoming Kafka events:
+
+- consumer-side обработка проходит через inbox table;
+- `event_id` входящего сообщения уникален;
+- уже обработанный `event_id` не вызывает handler повторно;
+- failed inbox message можно обработать повторно после следующей доставки.
+
 ## Transactional Outbox
 
 Создание notification и запись outbox event выполняются в одной DB transaction через `TransactionManager`.
@@ -88,6 +95,24 @@ docker compose exec laravel.test php artisan test --filter=outbox_message_is_mov
 ```bash
 make outbox-dead
 make outbox-retry-dead ID=1
+```
+
+## Inbox Pattern
+
+Inbox pattern закрывает идемпотентность consumer-side Kafka процессов.
+
+Состав:
+
+- `inbox_messages` table;
+- `IncomingMessage` DTO;
+- `InboxMessageRepository` port;
+- `ProcessInboxMessageHandler`;
+- `EloquentInboxMessageRepository`.
+
+Сценарий закреплен тестом:
+
+```bash
+docker compose exec laravel.test php artisan test tests/Feature/InboxMessageIntegrationTest.php
 ```
 
 ## Priority

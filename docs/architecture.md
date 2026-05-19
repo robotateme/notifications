@@ -60,6 +60,7 @@ Ports:
 - `NotificationDeliveryGateway`
 - `DomainEventPublisher`
 - `OutboxMessageRepository`
+- `InboxMessageRepository`
 - `MessageBroker`
 - `IdempotencyGuard`
 - `NotificationIdGenerator`
@@ -74,6 +75,7 @@ Infrastructure слой содержит адаптеры:
 - Laravel queue adapter.
 - Kafka broker adapter через `kcat`.
 - Outbox repository с claim locking и retry.
+- Inbox repository для идемпотентной обработки входящих Kafka events.
 - Cache lock based idempotency guard.
 - UUID generator на `ramsey/uuid`.
 
