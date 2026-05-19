@@ -8,6 +8,8 @@ interface DomainEvent
 
     public function name(): string;
 
+    public function aggregateId(): string;
+
     public function occurredAt(): Timestamp;
 
     /**

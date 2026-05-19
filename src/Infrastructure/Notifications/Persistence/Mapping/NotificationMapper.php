@@ -14,7 +14,6 @@ final class NotificationMapper
     public function toDomain(NotificationMessage $model): Notification
     {
         return new Notification(
-            internalId: $model->id,
             id: NotificationId::fromString($model->uuid)->value(),
             idempotencyKey: $model->idempotency_key,
             subscriberId: $model->subscriber_id,

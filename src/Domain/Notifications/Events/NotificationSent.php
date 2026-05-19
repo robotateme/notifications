@@ -25,6 +25,11 @@ final readonly class NotificationSent implements DomainEvent
         return 'notification.sent';
     }
 
+    public function aggregateId(): string
+    {
+        return $this->notificationId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;

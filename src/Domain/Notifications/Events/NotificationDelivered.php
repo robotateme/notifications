@@ -23,6 +23,11 @@ final readonly class NotificationDelivered implements DomainEvent
         return 'notification.delivered';
     }
 
+    public function aggregateId(): string
+    {
+        return $this->notificationId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;

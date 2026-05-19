@@ -5,23 +5,11 @@ namespace Infrastructure\Notifications\Persistence;
 use App\Models\NotificationMessage;
 use Application\Notifications\Ports\NotificationRepository;
 use Domain\Notifications\Notification;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Infrastructure\Notifications\Persistence\Mapping\NotificationMapper;
 
 final class EloquentNotificationRepository implements NotificationRepository
 {
     public function __construct(private readonly NotificationMapper $mapper) {}
-
-    public function get(int $id): Notification
-    {
-        $model = NotificationMessage::query()->find($id);
-
-        if ($model === null) {
-            throw (new ModelNotFoundException)->setModel(NotificationMessage::class, [$id]);
-        }
-
-        return $this->mapper->toDomain($model);
-    }
 
     public function findByPublicId(string $publicId): ?Notification
     {
@@ -59,7 +47,10 @@ final class EloquentNotificationRepository implements NotificationRepository
 
     public function save(Notification $notification): void
     {
-        $model = NotificationMessage::query()->findOrFail($notification->internalId);
+        $model = NotificationMessage::query()
+            ->where('uuid', $notification->id)
+            ->firstOrFail();
+
         $model->forceFill($this->mapper->toPersistence($notification))->save();
     }
 }

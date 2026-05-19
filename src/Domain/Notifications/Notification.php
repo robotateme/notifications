@@ -18,7 +18,6 @@ final class Notification
     private array $domainEvents = [];
 
     public function __construct(
-        public ?int $internalId,
         public string $id,
         public ?string $idempotencyKey,
         public string $subscriberId,
@@ -64,7 +63,6 @@ final class Notification
         $occurredAt = Timestamp::now();
 
         $notification = new self(
-            internalId: null,
             id: NotificationId::fromString($id)->value(),
             idempotencyKey: $idempotencyKey,
             subscriberId: $subscriberId,

@@ -24,6 +24,11 @@ final readonly class NotificationDropped implements DomainEvent
         return 'notification.dropped';
     }
 
+    public function aggregateId(): string
+    {
+        return $this->notificationId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;

@@ -161,6 +161,7 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         $message->refresh();
 
         $this->assertSame(OutboxMessageStatus::Pending->value, $message->status);
+        $this->assertSame(0, $message->attempts);
         $this->assertNotNull($message->available_at);
         $this->assertNull($message->last_error);
 

@@ -27,6 +27,11 @@ final readonly class NotificationQueued implements DomainEvent
         return 'notification.queued';
     }
 
+    public function aggregateId(): string
+    {
+        return $this->notificationId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;

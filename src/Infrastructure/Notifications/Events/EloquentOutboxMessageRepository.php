@@ -21,7 +21,7 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
             [
                 'topic' => $topic,
                 'event_name' => $event->name(),
-                'aggregate_id' => (string) $event->payload()['notification_id'],
+                'aggregate_id' => $event->aggregateId(),
                 'payload' => [
                     'event_id' => $event->eventId(),
                     'event_name' => $event->name(),
@@ -138,6 +138,7 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
             ->where('status', OutboxMessageStatus::Dead->value)
             ->update([
                 'status' => OutboxMessageStatus::Pending->value,
+                'attempts' => 0,
                 'available_at' => Timestamp::now()->toDatabaseString(),
                 'last_error' => null,
             ]) === 1;
