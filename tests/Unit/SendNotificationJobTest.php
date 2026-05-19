@@ -83,7 +83,7 @@ final class SendNotificationJobTest extends TestCase
         $this->assertSame('Delivery provider rejected the message.', $message->last_error);
     }
 
-    public function test_job_marks_notification_as_dropped_after_retries_are_exhausted(): void
+    public function test_job_marks_notification_as_dropped_on_last_retry_attempt(): void
     {
         $message = NotificationMessage::query()->create([
             'uuid' => self::notificationId(),
@@ -96,7 +96,22 @@ final class SendNotificationJobTest extends TestCase
             'queued_at' => Timestamp::now(),
         ]);
 
-        (new SendNotificationJob($message->uuid))->failed(new Exception('Retries exhausted.'));
+        $delivery = Mockery::mock(NotificationDeliveryGateway::class);
+        $delivery
+            ->shouldReceive('send')
+            ->once()
+            ->andThrow(new Exception('Retries exhausted.'));
+        $this->app->instance(NotificationDeliveryGateway::class, $delivery);
+
+        $job = (new SendNotificationJob($message->uuid))->withFakeQueueInteractions();
+        $job->job->attempts = 3;
+
+        try {
+            $job->handle($this->app->make(SendQueuedNotificationHandler::class));
+            $this->fail('Expected delivery exception was not thrown.');
+        } catch (Exception $exception) {
+            $this->assertSame('Retries exhausted.', $exception->getMessage());
+        }
 
         $message->refresh();
 

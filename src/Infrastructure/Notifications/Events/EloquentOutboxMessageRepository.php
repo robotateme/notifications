@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 final class EloquentOutboxMessageRepository implements OutboxMessageRepository
 {
-    private const MAX_ATTEMPTS = 5;
+    private const int MAX_ATTEMPTS = 5;
 
     public function add(DomainEvent $event, string $topic): void
     {
