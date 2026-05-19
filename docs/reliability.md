@@ -99,7 +99,7 @@ make outbox-retry-dead ID=1
 
 ## Inbox Pattern
 
-Inbox pattern закрывает идемпотентность consumer-side Kafka процессов.
+Inbox pattern закрывает идемпотентность consumer-side Kafka процессов и дополняет at-least-once модель брокера бизнесовой exactly-once обработкой по `event_id`.
 
 Состав:
 
@@ -109,11 +109,21 @@ Inbox pattern закрывает идемпотентность consumer-side Ka
 - `ProcessInboxMessageHandler`;
 - `EloquentInboxMessageRepository`.
 
+Статусы входящего сообщения:
+
+- `processing` - сообщение принято и обрабатывается;
+- `processed` - обработчик успешно завершился;
+- `failed` - обработчик завершился ошибкой, сообщение может быть обработано повторно при следующей доставке.
+
+Повтор уже обработанного `event_id` не вызывает бизнес-обработчик повторно.
+
 Сценарий закреплен тестом:
 
 ```bash
 docker compose exec laravel.test php artisan test tests/Feature/InboxMessageIntegrationTest.php
 ```
+
+Подробное описание: [Inbox pattern](inbox.md).
 
 ## Priority
 

@@ -40,6 +40,7 @@ make down
 - [API и OpenAPI](docs/api.md)
 - [Архитектура](docs/architecture.md)
 - [Reliability, Outbox, DLQ](docs/reliability.md)
+- [Inbox pattern для Kafka consumer](docs/inbox.md)
 
 ## Основные Возможности
 
@@ -50,6 +51,7 @@ make down
 - История уведомлений по подписчику.
 - Idempotency key для защиты от повторного создания уведомлений.
 - Transactional outbox для публикации domain events в Kafka.
+- Inbox pattern для идемпотентной обработки входящих Kafka events.
 - Retry, claim locking и dead-letter status для outbox.
 - Интеграционные и архитектурные тесты.
 

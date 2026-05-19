@@ -86,3 +86,19 @@ HTTP слой тонкий:
 - FormRequest валидирует входные данные и собирает command DTO.
 - Controller вызывает handler.
 - Presenter превращает domain object в JSON response.
+
+## Process Patterns
+
+Outbox и Inbox закрывают разные стороны Kafka-интеграции:
+
+- Outbox отвечает за надежную публикацию domain events из сервиса наружу.
+- Inbox отвечает за идемпотентную обработку входящих events от других сервисов.
+
+Inbox намеренно находится в Application/Infrastructure:
+
+- `Application\Notifications\Inbox\IncomingMessage` описывает входящее сообщение.
+- `Application\Notifications\Ports\InboxMessageRepository` задает атомарный контракт `handleOnce`.
+- `Application\Notifications\Commands\ProcessInboxMessageHandler` запускает бизнес-обработчик только один раз на `event_id`.
+- `Infrastructure\Notifications\Events\EloquentInboxMessageRepository` хранит состояние обработки в `inbox_messages`.
+
+Подробное описание: [Inbox pattern](inbox.md).
