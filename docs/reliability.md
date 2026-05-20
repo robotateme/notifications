@@ -8,6 +8,25 @@
 - Queue job может быть выполнен повторно.
 - Duplicate job не вызывает provider повторно, если notification уже `sent` или `delivered`.
 - Domain events публикуются через transactional outbox.
+- `trace_id` протаскивается из HTTP в notification, queue job, outbox и Kafka payload.
+
+## Traceability
+
+HTTP API принимает опциональный заголовок:
+
+```text
+X-Trace-Id: trace-order-1001
+```
+
+Если заголовок отсутствует, сервис генерирует UUID trace id на входе. Trace id сохраняется:
+
+- в `notification_messages.trace_id`;
+- в serialized `SendNotificationJob`;
+- в `outbox_messages.trace_id`;
+- в top-level Kafka payload `trace_id`;
+- в domain event data `trace_id`.
+
+Это дает один correlation id для синхронного HTTP-запроса, фоновой очереди, outbox publisher и Kafka-события.
 
 ## Idempotency
 

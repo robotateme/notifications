@@ -9,6 +9,7 @@ final readonly class CreateNotificationCommand
 {
     public function __construct(
         public ?string $idempotencyKey,
+        public ?string $traceId,
         public string $subscriberId,
         public NotificationChannel $channel,
         public NotificationPriority $priority,

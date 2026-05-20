@@ -14,6 +14,8 @@ paths:
       tags: [Notifications]
       summary: Queue a single notification
       description: Creates a notification or returns the existing one when the idempotency key has already been used.
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
       requestBody:
         required: true
         content:
@@ -56,6 +58,8 @@ paths:
     post:
       tags: [Notifications]
       summary: Queue a bulk SMS or Email campaign
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
       requestBody:
         required: true
         content:
@@ -160,6 +164,15 @@ paths:
                       $ref: '#/components/schemas/Notification'
 components:
   parameters:
+    TraceId:
+      name: X-Trace-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      description: Optional correlation id propagated to queue jobs, outbox messages and Kafka payloads.
     NotificationId:
       name: notification
       in: path
@@ -296,6 +309,10 @@ components:
           minLength: 64
           maxLength: 64
           pattern: '^[a-f0-9]{64}$'
+          nullable: true
+        trace_id:
+          type: string
+          maxLength: 128
           nullable: true
         subscriber_id:
           type: string

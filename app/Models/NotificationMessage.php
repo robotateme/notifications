@@ -10,6 +10,7 @@ use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
 #[Fillable([
     'uuid',
     'idempotency_key',
+    'trace_id',
     'subscriber_id',
     'channel',
     'priority',
@@ -47,5 +48,4 @@ class NotificationMessage extends Model
             'dropped_at' => TimestampCast::class,
         ];
     }
-
 }

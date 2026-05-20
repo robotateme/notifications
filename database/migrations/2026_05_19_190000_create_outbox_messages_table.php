@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('topic');
             $table->string('event_name')->index();
             $table->string('aggregate_id')->index();
+            $table->string('trace_id', 128)->nullable()->index();
             $table->json('payload');
             $table->string('status', 32)->default('pending')->index();
             $table->unsignedSmallInteger('attempts')->default(0);

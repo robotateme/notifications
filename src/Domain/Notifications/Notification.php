@@ -20,6 +20,7 @@ final class Notification
     public function __construct(
         public string $id,
         public ?string $idempotencyKey,
+        public ?string $traceId,
         public string $subscriberId,
         public NotificationChannel $channel,
         public NotificationPriority $priority,
@@ -40,6 +41,7 @@ final class Notification
     public static function queue(
         string $id,
         ?string $idempotencyKey,
+        ?string $traceId,
         string $subscriberId,
         NotificationChannel $channel,
         NotificationPriority $priority,
@@ -56,6 +58,10 @@ final class Notification
             Assert::notEmpty($idempotencyKey, 'Idempotency key must not be empty.');
         }
 
+        if ($traceId !== null) {
+            Assert::notEmpty($traceId, 'Trace id must not be empty.');
+        }
+
         if ($body !== null) {
             Assert::notEmpty($body, 'Notification body must not be empty.');
         }
@@ -65,6 +71,7 @@ final class Notification
         $notification = new self(
             id: NotificationId::fromString($id)->value(),
             idempotencyKey: $idempotencyKey,
+            traceId: $traceId,
             subscriberId: $subscriberId,
             channel: $channel,
             priority: $priority,
@@ -82,6 +89,7 @@ final class Notification
             subscriberId: $notification->subscriberId,
             channel: $notification->channel,
             priority: $notification->priority,
+            traceId: $notification->traceId,
             occurredAt: $occurredAt,
         ));
 
@@ -108,6 +116,7 @@ final class Notification
             notificationId: $this->id,
             subscriberId: $this->subscriberId,
             channel: $this->channel,
+            traceId: $this->traceId,
             occurredAt: $occurredAt,
         ));
     }
@@ -124,6 +133,7 @@ final class Notification
         $this->record(new NotificationDelivered(
             notificationId: $this->id,
             subscriberId: $this->subscriberId,
+            traceId: $this->traceId,
             occurredAt: $occurredAt,
         ));
     }
@@ -144,6 +154,7 @@ final class Notification
             notificationId: $this->id,
             subscriberId: $this->subscriberId,
             reason: $error,
+            traceId: $this->traceId,
             occurredAt: $occurredAt,
         ));
     }

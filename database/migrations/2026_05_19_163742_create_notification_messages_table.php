@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('idempotency_key', 64)->nullable()->unique();
+            $table->string('trace_id', 128)->nullable()->index();
             $table->string('channel', 32);
             $table->string('recipient');
             $table->string('subject')->nullable();

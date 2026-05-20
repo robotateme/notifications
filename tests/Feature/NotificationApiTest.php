@@ -26,18 +26,20 @@ final class NotificationApiTest extends TestCase
     {
         Queue::fake();
 
-        $response = $this->postJson('/api/notifications', [
-            'idempotency_key' => 'order-1001-email',
-            'channel' => 'email',
-            'recipient' => 'customer@example.com',
-            'subject' => 'Order shipped',
-            'body' => 'Your order is on the way.',
-            'payload' => ['order_id' => 1001],
-        ]);
+        $response = $this->withHeader('X-Trace-Id', 'trace-order-1001')
+            ->postJson('/api/notifications', [
+                'idempotency_key' => 'order-1001-email',
+                'channel' => 'email',
+                'recipient' => 'customer@example.com',
+                'subject' => 'Order shipped',
+                'body' => 'Your order is on the way.',
+                'payload' => ['order_id' => 1001],
+            ]);
 
         $response
             ->assertAccepted()
             ->assertJsonPath('data.idempotency_key_fingerprint', hash('sha256', 'order-1001-email'))
+            ->assertJsonPath('data.trace_id', 'trace-order-1001')
             ->assertJsonPath('data.subscriber_id', 'customer@example.com')
             ->assertJsonPath('data.channel', 'email')
             ->assertJsonPath('data.priority', NotificationPriority::Marketing->value)
@@ -46,10 +48,14 @@ final class NotificationApiTest extends TestCase
         $message = NotificationMessage::query()->firstOrFail();
 
         $this->assertSame(hash('sha256', 'order-1001-email'), $message->idempotency_key);
+        $this->assertSame('trace-order-1001', $message->trace_id);
+        $this->assertSame('trace-order-1001', OutboxMessage::query()->firstOrFail()->trace_id);
+        $this->assertSame('trace-order-1001', OutboxMessage::query()->firstOrFail()->payload['trace_id']);
 
         Queue::assertPushed(
             SendNotificationJob::class,
             fn (SendNotificationJob $job): bool => $job->notificationId === $message->uuid
+                && $job->traceId === 'trace-order-1001',
         );
     }
 
@@ -156,16 +162,17 @@ final class NotificationApiTest extends TestCase
     {
         Queue::fake();
 
-        $response = $this->postJson('/api/notifications/bulk', [
-            'idempotency_key' => 'campaign-42',
-            'channel' => 'email',
-            'priority' => 'marketing',
-            'body' => 'Sale starts today.',
-            'recipients' => [
-                'first@example.com',
-                'second@example.com',
-            ],
-        ]);
+        $response = $this->withHeader('X-Trace-Id', 'trace-campaign-42')
+            ->postJson('/api/notifications/bulk', [
+                'idempotency_key' => 'campaign-42',
+                'channel' => 'email',
+                'priority' => 'marketing',
+                'body' => 'Sale starts today.',
+                'recipients' => [
+                    'first@example.com',
+                    'second@example.com',
+                ],
+            ]);
 
         $response
             ->assertAccepted()
@@ -174,6 +181,10 @@ final class NotificationApiTest extends TestCase
             ->assertJsonPath('data.0.priority', NotificationPriority::Marketing->value);
 
         $this->assertSame(2, NotificationMessage::query()->count());
+        $this->assertSame(
+            ['trace-campaign-42', 'trace-campaign-42'],
+            NotificationMessage::query()->orderBy('id')->pluck('trace_id')->all(),
+        );
         $this->assertSame(
             [
                 hash('sha256', 'campaign-42:0:first@example.com'),

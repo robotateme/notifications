@@ -22,9 +22,11 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
                 'topic' => $topic,
                 'event_name' => $event->name(),
                 'aggregate_id' => $event->aggregateId(),
+                'trace_id' => $event->traceId(),
                 'payload' => [
                     'event_id' => $event->eventId(),
                     'event_name' => $event->name(),
+                    'trace_id' => $event->traceId(),
                     'occurred_at' => $event->occurredAt()->toAtom(),
                     'data' => $event->payload(),
                 ],

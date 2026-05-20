@@ -7,6 +7,7 @@ use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class StoreNotificationRequest extends FormRequest
@@ -59,6 +60,7 @@ final class StoreNotificationRequest extends FormRequest
 
         return new CreateNotificationCommand(
             idempotencyKey: $this->optionalString('idempotency_key'),
+            traceId: $this->traceId(),
             subscriberId: $this->optionalString('subscriber_id') ?? $recipient,
             channel: NotificationChannel::from((string) $this->validated('channel')),
             priority: NotificationPriority::from((string) $this->validated('priority', NotificationPriority::Marketing->value)),
@@ -74,6 +76,17 @@ final class StoreNotificationRequest extends FormRequest
         $value = $this->validated($key, null);
 
         return is_string($value) ? $value : null;
+    }
+
+    private function traceId(): string
+    {
+        $traceId = $this->header('X-Trace-Id') ?: $this->header('X-Request-Id');
+
+        if (is_string($traceId) && $traceId !== '' && strlen($traceId) <= 128) {
+            return $traceId;
+        }
+
+        return (string) Str::uuid();
     }
 
     /**

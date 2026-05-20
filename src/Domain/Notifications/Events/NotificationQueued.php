@@ -14,6 +14,7 @@ final readonly class NotificationQueued implements DomainEvent
         public string $subscriberId,
         public NotificationChannel $channel,
         public NotificationPriority $priority,
+        public ?string $traceId,
         private Timestamp $occurredAt,
     ) {}
 
@@ -32,6 +33,11 @@ final readonly class NotificationQueued implements DomainEvent
         return $this->notificationId;
     }
 
+    public function traceId(): ?string
+    {
+        return $this->traceId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;
@@ -42,6 +48,7 @@ final readonly class NotificationQueued implements DomainEvent
         return [
             'notification_id' => $this->notificationId,
             'subscriber_id' => $this->subscriberId,
+            'trace_id' => $this->traceId,
             'channel' => $this->channel->value,
             'priority' => $this->priority->value,
         ];

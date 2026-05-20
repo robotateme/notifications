@@ -8,10 +8,10 @@ use Domain\Notifications\NotificationPriority;
 
 final class LaravelNotificationQueue implements NotificationQueue
 {
-    public function enqueue(string $notificationId, NotificationPriority $priority): void
+    public function enqueue(string $notificationId, NotificationPriority $priority, ?string $traceId): void
     {
         $queue = $priority === NotificationPriority::Transactional ? 'notifications-high' : 'notifications';
 
-        SendNotificationJob::dispatch($notificationId)->onQueue($queue);
+        SendNotificationJob::dispatch($notificationId, $traceId)->onQueue($queue);
     }
 }

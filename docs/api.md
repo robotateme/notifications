@@ -23,6 +23,7 @@ GET  /api/subscribers/{subscriber}/notifications
 ```bash
 curl -X POST http://localhost/api/notifications \
   -H 'Content-Type: application/json' \
+  -H 'X-Trace-Id: trace-order-1001' \
   -d '{
     "idempotency_key": "order-1001-email",
     "channel": "email",
@@ -38,11 +39,14 @@ curl -X POST http://localhost/api/notifications \
 
 Оригинальный `idempotency_key` не хранится в базе. Для поиска дубликатов сервис сохраняет SHA-256 fingerprint ключа.
 
+`X-Trace-Id` опционален. Если он передан, сервис сохраняет его в notification, queue job, outbox и Kafka payload. Если заголовок не передан, сервис генерирует trace id сам.
+
 ## Bulk Notification
 
 ```bash
 curl -X POST http://localhost/api/notifications/bulk \
   -H 'Content-Type: application/json' \
+  -H 'X-Trace-Id: trace-campaign-42' \
   -d '{
     "idempotency_key": "campaign-42",
     "channel": "email",

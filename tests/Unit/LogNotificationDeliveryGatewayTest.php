@@ -70,6 +70,7 @@ final class LogNotificationDeliveryGatewayTest extends TestCase
         return Notification::queue(
             id: (new UuidNotificationIdGenerator)->generate(),
             idempotencyKey: null,
+            traceId: 'test-trace',
             subscriberId: $recipient,
             channel: $channel,
             priority: NotificationPriority::Marketing,

@@ -17,5 +17,6 @@ final readonly class CreateBulkNotificationsCommand
         public array $recipients,
         public ?string $subject = null,
         public ?string $idempotencyKey = null,
+        public ?string $traceId = null,
     ) {}
 }

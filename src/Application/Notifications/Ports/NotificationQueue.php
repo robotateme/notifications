@@ -6,5 +6,5 @@ use Domain\Notifications\NotificationPriority;
 
 interface NotificationQueue
 {
-    public function enqueue(string $notificationId, NotificationPriority $priority): void;
+    public function enqueue(string $notificationId, NotificationPriority $priority, ?string $traceId): void;
 }

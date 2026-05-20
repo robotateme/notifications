@@ -16,6 +16,7 @@ final class NotificationMapper
         return new Notification(
             id: NotificationId::fromString($model->uuid)->value(),
             idempotencyKey: $model->idempotency_key,
+            traceId: $model->trace_id,
             subscriberId: $model->subscriber_id,
             channel: NotificationChannel::from($model->channel),
             priority: NotificationPriority::from($model->priority),
@@ -42,6 +43,7 @@ final class NotificationMapper
         return [
             'uuid' => $notification->id,
             'idempotency_key' => $notification->idempotencyKey,
+            'trace_id' => $notification->traceId,
             'subscriber_id' => $notification->subscriberId,
             'channel' => $notification->channel->value,
             'priority' => $notification->priority->value,

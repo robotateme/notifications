@@ -11,6 +11,7 @@ use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
     'topic',
     'event_name',
     'aggregate_id',
+    'trace_id',
     'payload',
     'status',
     'attempts',

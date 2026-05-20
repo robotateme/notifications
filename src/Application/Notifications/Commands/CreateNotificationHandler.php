@@ -49,6 +49,7 @@ final class CreateNotificationHandler
         $notification = Notification::queue(
             id: $this->ids->generate(),
             idempotencyKey: $idempotencyKey,
+            traceId: $command->traceId,
             subscriberId: $command->subscriberId,
             channel: $command->channel,
             priority: $command->priority,
@@ -69,7 +70,7 @@ final class CreateNotificationHandler
             return $notification;
         });
 
-        $this->queue->enqueue($notification->id, $notification->priority);
+        $this->queue->enqueue($notification->id, $notification->priority, $notification->traceId);
 
         return new CreateNotificationResult($notification, true);
     }

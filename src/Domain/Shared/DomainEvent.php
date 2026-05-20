@@ -10,6 +10,8 @@ interface DomainEvent
 
     public function aggregateId(): string;
 
+    public function traceId(): ?string;
+
     public function occurredAt(): Timestamp;
 
     /**

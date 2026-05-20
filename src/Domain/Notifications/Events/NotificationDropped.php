@@ -11,6 +11,7 @@ final readonly class NotificationDropped implements DomainEvent
         public string $notificationId,
         public string $subscriberId,
         public string $reason,
+        public ?string $traceId,
         private Timestamp $occurredAt,
     ) {}
 
@@ -29,6 +30,11 @@ final readonly class NotificationDropped implements DomainEvent
         return $this->notificationId;
     }
 
+    public function traceId(): ?string
+    {
+        return $this->traceId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;
@@ -39,6 +45,7 @@ final readonly class NotificationDropped implements DomainEvent
         return [
             'notification_id' => $this->notificationId,
             'subscriber_id' => $this->subscriberId,
+            'trace_id' => $this->traceId,
             'reason' => $this->reason,
         ];
     }

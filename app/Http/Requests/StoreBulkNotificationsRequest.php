@@ -7,6 +7,7 @@ use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class StoreBulkNotificationsRequest extends FormRequest
@@ -65,6 +66,7 @@ final class StoreBulkNotificationsRequest extends FormRequest
             recipients: $recipients,
             subject: $this->optionalString('subject'),
             idempotencyKey: $this->optionalString('idempotency_key'),
+            traceId: $this->traceId(),
         );
     }
 
@@ -73,5 +75,16 @@ final class StoreBulkNotificationsRequest extends FormRequest
         $value = $this->validated($key, null);
 
         return is_string($value) ? $value : null;
+    }
+
+    private function traceId(): string
+    {
+        $traceId = $this->header('X-Trace-Id') ?: $this->header('X-Request-Id');
+
+        if (is_string($traceId) && $traceId !== '' && strlen($traceId) <= 128) {
+            return $traceId;
+        }
+
+        return (string) Str::uuid();
     }
 }

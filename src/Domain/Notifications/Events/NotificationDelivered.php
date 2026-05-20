@@ -10,6 +10,7 @@ final readonly class NotificationDelivered implements DomainEvent
     public function __construct(
         public string $notificationId,
         public string $subscriberId,
+        public ?string $traceId,
         private Timestamp $occurredAt,
     ) {}
 
@@ -28,6 +29,11 @@ final readonly class NotificationDelivered implements DomainEvent
         return $this->notificationId;
     }
 
+    public function traceId(): ?string
+    {
+        return $this->traceId;
+    }
+
     public function occurredAt(): Timestamp
     {
         return $this->occurredAt;
@@ -38,6 +44,7 @@ final readonly class NotificationDelivered implements DomainEvent
         return [
             'notification_id' => $this->notificationId,
             'subscriber_id' => $this->subscriberId,
+            'trace_id' => $this->traceId,
         ];
     }
 }

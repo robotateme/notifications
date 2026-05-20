@@ -17,7 +17,10 @@ final class SendNotificationJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public readonly string $notificationId) {}
+    public function __construct(
+        public readonly string $notificationId,
+        public readonly ?string $traceId = null,
+    ) {}
 
     /**
      * Execute the job.

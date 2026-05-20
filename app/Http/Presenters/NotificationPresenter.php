@@ -14,6 +14,7 @@ final class NotificationPresenter
         return [
             'id' => $notification->id,
             'idempotency_key_fingerprint' => $notification->idempotencyKey,
+            'trace_id' => $notification->traceId,
             'subscriber_id' => $notification->subscriberId,
             'channel' => $notification->channel->value,
             'priority' => $notification->priority->value,
