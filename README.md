@@ -7,6 +7,12 @@
 ## Быстрый старт
 
 ```bash
+docker compose up -d --build
+```
+
+То же самое через Make:
+
+```bash
 make up
 make validate
 make test
@@ -26,7 +32,7 @@ make down
 
 ## Что внутри
 
-- Single и bulk notification API.
+- Bulk API для массовой отправки Email/SMS и single API для Email/SMS/Push.
 - Приоритеты: `transactional` идет в `notifications-high`, `marketing` - в `notifications`.
 - Статусы: `queued`, `sent`, `delivered`, `dropped`.
 - Idempotency key для защиты от дублей API.
@@ -34,6 +40,7 @@ make down
 - Inbox для идемпотентной обработки входящих Kafka events.
 - Retry/DLQ для outbox.
 - Trace id для связи HTTP, queue, outbox и Kafka.
+- Интеграционные тесты покрывают API, queue worker, provider mock, outbox retry/DLQ и inbox.
 
 ## Документация
 

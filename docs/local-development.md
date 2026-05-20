@@ -5,6 +5,12 @@
 ## Старт
 
 ```bash
+docker compose up -d --build
+```
+
+Или через Make:
+
+```bash
 make up
 ```
 
