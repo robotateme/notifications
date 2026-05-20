@@ -24,7 +24,7 @@ help:
 	@echo "  make validate     Validate composer.json, compose config and OpenAPI"
 	@echo "  make openapi      Validate docs/openapi.yaml"
 	@echo "  make outbox       Publish pending outbox messages once"
-	@echo "  make outbox-dead  List dead outbox messages"
+	@echo "  make outbox-dead  List dead outbox messages, supports LIMIT=50 PAGE=1"
 	@echo "  make outbox-retry-dead ID=1 Return a dead outbox message to pending"
 	@echo "  make queue        Run queue worker in the foreground"
 	@echo "  make status       Show containers"
@@ -95,7 +95,7 @@ outbox:
 	$(DC) exec $(APP) php artisan outbox:publish --limit=100
 
 outbox-dead:
-	$(DC) exec $(APP) php artisan outbox:dead --limit=50
+	$(DC) exec $(APP) php artisan outbox:dead --limit=$${LIMIT:-50} --page=$${PAGE:-1}
 
 outbox-retry-dead:
 	@test -n "$(ID)" || (echo "Usage: make outbox-retry-dead ID=<outbox-id>" && exit 1)

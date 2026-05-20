@@ -22,7 +22,9 @@ interface OutboxMessageRepository
     /**
      * @return iterable<int, DeadOutboxMessage>
      */
-    public function dead(int $limit): iterable;
+    public function dead(int $limit, int $offset = 0): iterable;
+
+    public function deadCount(): int;
 
     public function retryDead(int $id): bool;
 }

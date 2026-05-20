@@ -67,6 +67,7 @@ docker compose exec laravel.test php artisan test tests/Feature/InboxMessageInte
 make queue
 make outbox
 make outbox-dead
+make outbox-dead LIMIT=100 PAGE=2
 make outbox-retry-dead ID=1
 ```
 
@@ -98,5 +99,7 @@ make outbox
 ```
 
 Kafka UI доступен на `http://localhost:8081`.
+
+Prometheus-compatible метрики доступны на `http://localhost/metrics`.
 
 Входящие Kafka events должны обрабатываться через inbox pattern. В проекте уже есть Application handler и Infrastructure repository для атомарной дедубликации по паре `event_id` + `consumer_name`; отдельный long-running consumer command можно добавить поверх этого контракта без изменения Domain.

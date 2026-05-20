@@ -143,6 +143,7 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         ]);
 
         $this->artisan('outbox:dead', ['--limit' => 10])
+            ->expectsOutput('Dead outbox messages: 1. Page 1, limit 10.')
             ->expectsTable(
                 ['ID', 'Event ID', 'Topic', 'Event', 'Aggregate ID', 'Attempts', 'Last Error'],
                 [[
@@ -171,6 +172,42 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         $this->artisan('outbox:dead', ['--limit' => 10])
             ->expectsOutput('No dead outbox messages.')
             ->assertExitCode(0);
+    }
+
+    public function test_dead_outbox_messages_are_paginated(): void
+    {
+        $first = $this->deadOutboxMessage('event-1', 'notification-1');
+        $second = $this->deadOutboxMessage('event-2', 'notification-2');
+
+        $this->artisan('outbox:dead', ['--limit' => 1, '--page' => 2])
+            ->expectsOutput('Dead outbox messages: 2. Page 2, limit 1.')
+            ->expectsTable(
+                ['ID', 'Event ID', 'Topic', 'Event', 'Aggregate ID', 'Attempts', 'Last Error'],
+                [[
+                    $second->id,
+                    'event-2',
+                    'notifications.events',
+                    'notification.queued',
+                    'notification-2',
+                    5,
+                    'Kafka is unavailable.',
+                ]],
+            )
+            ->assertExitCode(0);
+
+        $this->assertNotSame($first->id, $second->id);
+    }
+
+    public function test_metrics_include_dead_outbox_count(): void
+    {
+        $this->deadOutboxMessage('event-1', 'notification-1');
+        $this->deadOutboxMessage('event-2', 'notification-2');
+
+        $this->get('/metrics')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+            ->assertSee('# TYPE notifications_outbox_dead_messages gauge', false)
+            ->assertSee('notifications_outbox_dead_messages 2', false);
     }
 
     public function test_retry_dead_outbox_message_reports_missing_message(): void
@@ -294,5 +331,19 @@ final class NotificationDeliveryIntegrationTest extends TestCase
     private static function notificationId(): string
     {
         return (new UuidNotificationIdGenerator)->generate();
+    }
+
+    private function deadOutboxMessage(string $eventId, string $aggregateId): OutboxMessage
+    {
+        return OutboxMessage::query()->create([
+            'event_id' => $eventId,
+            'topic' => 'notifications.events',
+            'event_name' => 'notification.queued',
+            'aggregate_id' => $aggregateId,
+            'payload' => ['event_id' => $eventId],
+            'status' => OutboxMessageStatus::Dead->value,
+            'attempts' => 5,
+            'last_error' => 'Kafka is unavailable.',
+        ]);
     }
 }

@@ -113,11 +113,12 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
         ])->save();
     }
 
-    public function dead(int $limit): iterable
+    public function dead(int $limit, int $offset = 0): iterable
     {
         return OutboxMessage::query()
             ->where('status', OutboxMessageStatus::Dead->value)
             ->orderBy('id')
+            ->offset($offset)
             ->limit($limit)
             ->lazy()
             ->map(fn (OutboxMessage $message): DeadOutboxMessage => new DeadOutboxMessage(
@@ -129,6 +130,13 @@ final class EloquentOutboxMessageRepository implements OutboxMessageRepository
                 attempts: $message->attempts,
                 lastError: $message->last_error,
             ));
+    }
+
+    public function deadCount(): int
+    {
+        return OutboxMessage::query()
+            ->where('status', OutboxMessageStatus::Dead->value)
+            ->count();
     }
 
     public function retryDead(int $id): bool

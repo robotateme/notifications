@@ -103,8 +103,9 @@ notification-delivery:<notification-uuid>
 - больше не выбираются publisher-ом;
 - сохраняют `last_error`;
 - сохраняют количество `attempts`;
-- могут быть просмотрены через `make outbox-dead`;
+- могут быть просмотрены через paginated CLI `make outbox-dead LIMIT=50 PAGE=1`;
 - могут быть возвращены в retry flow через `make outbox-retry-dead ID=<outbox-id>`.
+- доступны для мониторинга через Prometheus-compatible метрику `notifications_outbox_dead_messages`.
 
 Сценарий закреплен тестом:
 
@@ -116,7 +117,14 @@ docker compose exec laravel.test php artisan test --filter=outbox_message_is_mov
 
 ```bash
 make outbox-dead
+make outbox-dead LIMIT=100 PAGE=2
 make outbox-retry-dead ID=1
+```
+
+Метрики:
+
+```bash
+curl http://localhost/metrics
 ```
 
 ## Inbox Pattern
