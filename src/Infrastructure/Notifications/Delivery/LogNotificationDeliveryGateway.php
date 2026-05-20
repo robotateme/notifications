@@ -10,8 +10,10 @@ use Webmozart\Assert\Assert;
 
 final class LogNotificationDeliveryGateway implements NotificationDeliveryGateway
 {
-    public function send(Notification $notification): void
+    public function send(Notification $notification, string $idempotencyKey): void
     {
+        Assert::notEmpty($idempotencyKey, 'Delivery idempotency key is required.');
+
         match ($notification->channel) {
             NotificationChannel::Email => Assert::email(
                 $notification->recipient,
@@ -31,6 +33,7 @@ final class LogNotificationDeliveryGateway implements NotificationDeliveryGatewa
 
         Log::info('Notification delivered.', [
             'notification_id' => $notification->id,
+            'idempotency_key' => $idempotencyKey,
             'channel' => $notification->channel->value,
             'recipient' => $notification->recipient,
         ]);

@@ -32,7 +32,7 @@ final class SendQueuedNotificationHandler
         $this->notifications->save($notification);
 
         try {
-            $this->delivery->send($notification);
+            $this->delivery->send($notification, $this->deliveryIdempotencyKey($notification));
             $notification->markSent();
             $this->notifications->save($notification);
             $this->publishRecordedEvents($notification);
@@ -50,6 +50,11 @@ final class SendQueuedNotificationHandler
                 throw $exception;
             }
         }
+    }
+
+    private function deliveryIdempotencyKey(Notification $notification): string
+    {
+        return "notification-delivery:{$notification->id}";
     }
 
     private function publishRecordedEvents(Notification $notification): void

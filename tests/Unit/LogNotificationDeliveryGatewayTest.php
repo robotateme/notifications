@@ -18,10 +18,10 @@ final class LogNotificationDeliveryGatewayTest extends TestCase
     {
         Log::shouldReceive('info')->once();
 
-        (new LogNotificationDeliveryGateway())->send($this->notification(
+        (new LogNotificationDeliveryGateway)->send($this->notification(
             channel: NotificationChannel::Email,
             recipient: 'subscriber@example.com',
-        ));
+        ), 'notification-delivery:test');
     }
 
     /**
@@ -35,10 +35,10 @@ final class LogNotificationDeliveryGatewayTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($case['error']);
 
-        (new LogNotificationDeliveryGateway())->send($this->notification(
+        (new LogNotificationDeliveryGateway)->send($this->notification(
             channel: $case['channel'],
             recipient: $case['recipient'],
-        ));
+        ), 'notification-delivery:test');
     }
 
     /**
@@ -68,7 +68,7 @@ final class LogNotificationDeliveryGatewayTest extends TestCase
     private function notification(NotificationChannel $channel, string $recipient): Notification
     {
         return Notification::queue(
-            id: (new UuidNotificationIdGenerator())->generate(),
+            id: (new UuidNotificationIdGenerator)->generate(),
             idempotencyKey: null,
             subscriberId: $recipient,
             channel: $channel,

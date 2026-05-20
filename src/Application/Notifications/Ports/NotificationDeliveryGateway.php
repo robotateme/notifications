@@ -6,5 +6,5 @@ use Domain\Notifications\Notification;
 
 interface NotificationDeliveryGateway
 {
-    public function send(Notification $notification): void;
+    public function send(Notification $notification, string $idempotencyKey): void;
 }

@@ -27,7 +27,10 @@ final class NotificationDeliveryIntegrationTest extends TestCase
     public function test_marketing_bulk_notification_flows_from_api_through_queue_to_provider_and_database(): void
     {
         $delivery = Mockery::mock(NotificationDeliveryGateway::class);
-        $delivery->shouldReceive('send')->once();
+        $delivery
+            ->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($notification, string $idempotencyKey): bool => $idempotencyKey === "notification-delivery:{$notification->id}");
         $this->app->instance(NotificationDeliveryGateway::class, $delivery);
 
         $response = $this->postJson('/api/notifications/bulk', [
@@ -201,6 +204,50 @@ final class NotificationDeliveryIntegrationTest extends TestCase
         $this->assertSame(0, $message->attempts);
     }
 
+    public function test_retry_uses_same_provider_idempotency_key(): void
+    {
+        $message = NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
+            'subscriber_id' => 'subscriber@example.com',
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
+            'recipient' => 'subscriber@example.com',
+            'body' => 'Hello.',
+            'status' => NotificationStatus::Queued->value,
+            'queued_at' => Timestamp::now(),
+        ]);
+        $expectedKey = "notification-delivery:{$message->uuid}";
+
+        $delivery = Mockery::mock(NotificationDeliveryGateway::class);
+        $delivery
+            ->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($notification, string $idempotencyKey): bool => $notification->id === $message->uuid
+                && $idempotencyKey === $expectedKey)
+            ->andThrow(new Exception('Provider timeout after accepting request.'));
+        $this->app->instance(NotificationDeliveryGateway::class, $delivery);
+
+        try {
+            (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
+            $this->fail('Expected provider timeout was not thrown.');
+        } catch (Exception $exception) {
+            $this->assertSame('Provider timeout after accepting request.', $exception->getMessage());
+        }
+
+        $delivery = Mockery::mock(NotificationDeliveryGateway::class);
+        $delivery
+            ->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($notification, string $idempotencyKey): bool => $notification->id === $message->uuid
+                && $idempotencyKey === $expectedKey);
+        $this->app->instance(NotificationDeliveryGateway::class, $delivery);
+
+        (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
+
+        $this->assertSame(NotificationStatus::Sent->value, $message->refresh()->status);
+        $this->assertSame(2, $message->attempts);
+    }
+
     public function test_failed_attempt_is_retryable_and_next_attempt_can_send_message(): void
     {
         $message = NotificationMessage::query()->create([
@@ -246,6 +293,6 @@ final class NotificationDeliveryIntegrationTest extends TestCase
 
     private static function notificationId(): string
     {
-        return (new UuidNotificationIdGenerator())->generate();
+        return (new UuidNotificationIdGenerator)->generate();
     }
 }

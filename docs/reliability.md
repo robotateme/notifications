@@ -72,6 +72,25 @@ tries = 3
 backoff = 10
 ```
 
+## Provider Last Step
+
+Строгая гарантия ровно одной физической отправки невозможна только силами нашей БД, если внешний provider не поддерживает идемпотентность. Проблемный сценарий:
+
+1. Сервис вызвал provider.
+2. Provider принял сообщение.
+3. Процесс упал до сохранения статуса `sent`.
+4. Queue retry повторил job.
+
+Чтобы закрыть этот last-step gap на уровне бизнес-логики, каждый вызов `NotificationDeliveryGateway` получает стабильный provider idempotency key:
+
+```text
+notification-delivery:<notification-uuid>
+```
+
+Реальный SMS/Email adapter должен передавать этот ключ во внешний provider как idempotency/request key. Тогда повторный retry с тем же notification не создает вторую физическую отправку на стороне provider.
+
+Если provider не поддерживает idempotency key, система может гарантировать только at-least-once попытку отправки и защиту от повторной отправки после сохраненного `sent`.
+
 ## DLQ
 
 После пятой ошибки публикации outbox message получает статус `dead`.
