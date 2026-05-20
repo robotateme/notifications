@@ -27,7 +27,7 @@ final class StoreNotificationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'idempotency_key' => ['nullable', 'string', 'max:120'],
+            'idempotency_key' => ['nullable', 'string', 'min:1', 'max:120'],
             'subscriber_id' => ['nullable', 'string', 'max:255'],
             'channel' => [
                 'required',

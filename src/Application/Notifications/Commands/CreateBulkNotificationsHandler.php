@@ -2,6 +2,7 @@
 
 namespace Application\Notifications\Commands;
 
+use Application\Notifications\Idempotency\IdempotencyKeyFingerprint;
 use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\IdempotencyGuard;
 use Application\Notifications\Ports\NotificationIdGenerator;
@@ -29,9 +30,11 @@ final class CreateBulkNotificationsHandler
         $created = [];
 
         foreach ($command->recipients as $index => $recipient) {
-            $idempotencyKey = $command->idempotencyKey === null
-                ? null
-                : "{$command->idempotencyKey}:{$index}:{$recipient}";
+            $idempotencyKey = IdempotencyKeyFingerprint::forBulkRecipient(
+                $command->idempotencyKey,
+                $index,
+                $recipient,
+            );
 
             $created[] = $idempotencyKey === null
                 ? $this->createOne($command, $recipient, $idempotencyKey)

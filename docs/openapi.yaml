@@ -194,6 +194,7 @@ components:
         idempotency_key:
           type: string
           maxLength: 120
+          minLength: 1
           nullable: true
         subscriber_id:
           type: string
@@ -231,6 +232,7 @@ components:
         idempotency_key:
           type: string
           maxLength: 120
+          minLength: 1
           nullable: true
         channel:
           type: string
@@ -289,8 +291,11 @@ components:
         id:
           type: string
           format: uuid
-        idempotency_key:
+        idempotency_key_fingerprint:
           type: string
+          minLength: 64
+          maxLength: 64
+          pattern: '^[a-f0-9]{64}$'
           nullable: true
         subscriber_id:
           type: string

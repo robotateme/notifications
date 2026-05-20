@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('notification_messages', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->string('idempotency_key')->nullable()->unique();
+            $table->string('idempotency_key', 64)->nullable()->unique();
             $table->string('channel', 32);
             $table->string('recipient');
             $table->string('subject')->nullable();

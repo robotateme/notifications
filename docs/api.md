@@ -36,6 +36,8 @@ curl -X POST http://localhost/api/notifications \
 
 Если `idempotency_key` уже использовался, API вернет существующее уведомление без повторной постановки в очередь.
 
+Оригинальный `idempotency_key` не хранится в базе. Для поиска дубликатов сервис сохраняет SHA-256 fingerprint ключа.
+
 ## Bulk Notification
 
 ```bash
@@ -51,6 +53,7 @@ curl -X POST http://localhost/api/notifications/bulk \
 ```
 
 Для bulk-запроса idempotency key расширяется до per-recipient ключа, чтобы повтор запроса не создавал дубликаты по каждому получателю.
+В БД сохраняется только SHA-256 fingerprint расширенного ключа.
 
 ## Priority
 

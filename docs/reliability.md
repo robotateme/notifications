@@ -13,13 +13,16 @@
 
 Single notification:
 
-- внешний `idempotency_key` сохраняется вместе с notification;
+- внешний `idempotency_key` валидируется по длине до 120 символов;
+- оригинальный ключ не сохраняется;
+- в БД и Redis-lock хранится SHA-256 fingerprint длиной 64 символа;
 - повторный запрос возвращает уже созданную запись;
 - job повторно не ставится.
 
 Bulk notification:
 
 - внешний ключ расширяется до per-recipient ключа;
+- per-recipient ключ также хранится только как SHA-256 fingerprint;
 - повтор bulk-запроса не создает дубликаты по получателям.
 
 Incoming Kafka events:

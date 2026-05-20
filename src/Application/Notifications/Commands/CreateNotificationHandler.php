@@ -2,6 +2,7 @@
 
 namespace Application\Notifications\Commands;
 
+use Application\Notifications\Idempotency\IdempotencyKeyFingerprint;
 use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\IdempotencyGuard;
 use Application\Notifications\Ports\NotificationIdGenerator;
@@ -23,20 +24,22 @@ final class CreateNotificationHandler
 
     public function handle(CreateNotificationCommand $command): CreateNotificationResult
     {
-        if ($command->idempotencyKey !== null) {
+        $idempotencyKey = IdempotencyKeyFingerprint::fromExternal($command->idempotencyKey);
+
+        if ($idempotencyKey !== null) {
             return $this->idempotency->run(
-                $command->idempotencyKey,
-                fn (): CreateNotificationResult => $this->create($command),
+                $idempotencyKey,
+                fn (): CreateNotificationResult => $this->create($command, $idempotencyKey),
             );
         }
 
-        return $this->create($command);
+        return $this->create($command, $idempotencyKey);
     }
 
-    private function create(CreateNotificationCommand $command): CreateNotificationResult
+    private function create(CreateNotificationCommand $command, ?string $idempotencyKey): CreateNotificationResult
     {
-        if ($command->idempotencyKey !== null) {
-            $existing = $this->notifications->findByIdempotencyKey($command->idempotencyKey);
+        if ($idempotencyKey !== null) {
+            $existing = $this->notifications->findByIdempotencyKey($idempotencyKey);
 
             if ($existing !== null) {
                 return new CreateNotificationResult($existing, false);
@@ -45,7 +48,7 @@ final class CreateNotificationHandler
 
         $notification = Notification::queue(
             id: $this->ids->generate(),
-            idempotencyKey: $command->idempotencyKey,
+            idempotencyKey: $idempotencyKey,
             subscriberId: $command->subscriberId,
             channel: $command->channel,
             priority: $command->priority,

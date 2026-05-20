@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\SendNotificationJob;
 use App\Models\NotificationMessage;
 use App\Models\OutboxMessage;
+use Application\Notifications\Idempotency\IdempotencyKeyFingerprint;
 use Application\Notifications\Ports\DomainEventPublisher;
 use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
@@ -36,13 +37,15 @@ final class NotificationApiTest extends TestCase
 
         $response
             ->assertAccepted()
-            ->assertJsonPath('data.idempotency_key', 'order-1001-email')
+            ->assertJsonPath('data.idempotency_key_fingerprint', hash('sha256', 'order-1001-email'))
             ->assertJsonPath('data.subscriber_id', 'customer@example.com')
             ->assertJsonPath('data.channel', 'email')
             ->assertJsonPath('data.priority', NotificationPriority::Marketing->value)
             ->assertJsonPath('data.status', NotificationStatus::Queued->value);
 
         $message = NotificationMessage::query()->firstOrFail();
+
+        $this->assertSame(hash('sha256', 'order-1001-email'), $message->idempotency_key);
 
         Queue::assertPushed(
             SendNotificationJob::class,
@@ -70,7 +73,25 @@ final class NotificationApiTest extends TestCase
             ->assertJsonPath('data.id', $first->json('data.id'));
 
         $this->assertSame(1, NotificationMessage::query()->count());
+        $this->assertSame(hash('sha256', 'same-request'), NotificationMessage::query()->firstOrFail()->idempotency_key);
         Queue::assertPushed(SendNotificationJob::class, 1);
+    }
+
+    public function test_idempotency_key_length_is_limited(): void
+    {
+        Queue::fake();
+
+        $this->postJson('/api/notifications', [
+            'idempotency_key' => str_repeat('a', IdempotencyKeyFingerprint::MAX_EXTERNAL_LENGTH + 1),
+            'channel' => 'email',
+            'recipient' => 'customer@example.com',
+            'body' => 'Hello.',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['idempotency_key']);
+
+        $this->assertSame(0, NotificationMessage::query()->count());
+        Queue::assertNothingPushed();
     }
 
     public function test_notification_can_be_fetched_by_public_id(): void
@@ -153,6 +174,13 @@ final class NotificationApiTest extends TestCase
             ->assertJsonPath('data.0.priority', NotificationPriority::Marketing->value);
 
         $this->assertSame(2, NotificationMessage::query()->count());
+        $this->assertSame(
+            [
+                hash('sha256', 'campaign-42:0:first@example.com'),
+                hash('sha256', 'campaign-42:1:second@example.com'),
+            ],
+            NotificationMessage::query()->orderBy('id')->pluck('idempotency_key')->all(),
+        );
         Queue::assertPushed(SendNotificationJob::class, 2);
     }
 
@@ -252,6 +280,6 @@ final class NotificationApiTest extends TestCase
 
     private static function notificationId(): string
     {
-        return (new UuidNotificationIdGenerator())->generate();
+        return (new UuidNotificationIdGenerator)->generate();
     }
 }

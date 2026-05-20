@@ -13,7 +13,7 @@ final class NotificationPresenter
     {
         return [
             'id' => $notification->id,
-            'idempotency_key' => $notification->idempotencyKey,
+            'idempotency_key_fingerprint' => $notification->idempotencyKey,
             'subscriber_id' => $notification->subscriberId,
             'channel' => $notification->channel->value,
             'priority' => $notification->priority->value,
