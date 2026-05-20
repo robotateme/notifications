@@ -46,11 +46,15 @@ final class EloquentInboxMessageRepository implements InboxMessageRepository
         return DB::transaction(function () use ($message): ?InboxMessage {
             $inbox = InboxMessage::query()
                 ->where('event_id', $message->eventId)
+                ->where('consumer_name', $message->consumerName)
                 ->lockForUpdate()
                 ->first();
 
             if ($inbox !== null) {
-                if ($inbox->status === InboxMessageStatus::Processed->value) {
+                if (in_array($inbox->status, [
+                    InboxMessageStatus::Processing->value,
+                    InboxMessageStatus::Processed->value,
+                ], true)) {
                     return null;
                 }
 
@@ -65,6 +69,7 @@ final class EloquentInboxMessageRepository implements InboxMessageRepository
             try {
                 return InboxMessage::query()->create([
                     'event_id' => $message->eventId,
+                    'consumer_name' => $message->consumerName,
                     'topic' => $message->topic,
                     'message_key' => $message->key,
                     'payload' => $message->payload,

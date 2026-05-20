@@ -99,4 +99,4 @@ make outbox
 
 Kafka UI доступен на `http://localhost:8081`.
 
-Входящие Kafka events должны обрабатываться через inbox pattern. В проекте уже есть Application handler и Infrastructure repository для атомарной дедубликации по `event_id`; отдельный long-running consumer command можно добавить поверх этого контракта без изменения Domain.
+Входящие Kafka events должны обрабатываться через inbox pattern. В проекте уже есть Application handler и Infrastructure repository для атомарной дедубликации по паре `event_id` + `consumer_name`; отдельный long-running consumer command можно добавить поверх этого контракта без изменения Domain.

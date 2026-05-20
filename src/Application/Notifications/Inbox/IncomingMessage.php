@@ -9,6 +9,7 @@ final readonly class IncomingMessage
      */
     public function __construct(
         public string $eventId,
+        public string $consumerName,
         public string $topic,
         public ?string $key,
         public array $payload,

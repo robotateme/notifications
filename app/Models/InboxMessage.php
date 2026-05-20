@@ -8,6 +8,7 @@ use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
 
 #[Fillable([
     'event_id',
+    'consumer_name',
     'topic',
     'message_key',
     'payload',

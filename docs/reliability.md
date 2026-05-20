@@ -25,8 +25,8 @@ Bulk notification:
 Incoming Kafka events:
 
 - consumer-side обработка проходит через inbox table;
-- `event_id` входящего сообщения уникален;
-- уже обработанный `event_id` не вызывает handler повторно;
+- пара `event_id` + `consumer_name` входящего сообщения уникальна;
+- уже обрабатываемый или обработанный `event_id` для того же consumer не вызывает handler повторно;
 - failed inbox message можно обработать повторно после следующей доставки.
 
 ## Transactional Outbox
@@ -99,7 +99,7 @@ make outbox-retry-dead ID=1
 
 ## Inbox Pattern
 
-Inbox pattern закрывает идемпотентность consumer-side Kafka процессов и дополняет at-least-once модель брокера бизнесовой exactly-once обработкой по `event_id`.
+Inbox pattern закрывает идемпотентность consumer-side Kafka процессов и дополняет at-least-once модель брокера бизнесовой exactly-once обработкой по паре `event_id` + `consumer_name`.
 
 Состав:
 
@@ -111,11 +111,11 @@ Inbox pattern закрывает идемпотентность consumer-side Ka
 
 Статусы входящего сообщения:
 
-- `processing` - сообщение принято и обрабатывается;
+- `processing` - сообщение принято и обрабатывается, параллельный повтор не запускает handler;
 - `processed` - обработчик успешно завершился;
 - `failed` - обработчик завершился ошибкой, сообщение может быть обработано повторно при следующей доставке.
 
-Повтор уже обработанного `event_id` не вызывает бизнес-обработчик повторно.
+Повтор уже обрабатываемого или обработанного `event_id` для того же consumer не вызывает бизнес-обработчик повторно.
 
 Сценарий закреплен тестом:
 
