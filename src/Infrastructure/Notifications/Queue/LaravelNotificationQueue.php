@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Infrastructure\Notifications\Queue;
 
 use App\Jobs\SendNotificationJob;

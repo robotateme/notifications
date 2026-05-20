@@ -1,5 +1,7 @@
 # Notification Service
 
+[![CI](https://github.com/robotateme/notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/robotateme/notifications/actions/workflows/ci.yml)
+
 Микросервис уведомлений для массовой отправки Email/SMS/Push сообщений с приоритетами, идемпотентностью, outbox-публикацией событий в Kafka и отслеживанием статусов доставки.
 
 ## Быстрый Старт
@@ -20,6 +22,7 @@ make up
 - API: `http://localhost/api`
 - Kafka UI: `http://localhost:8081`
 - OpenAPI: [docs/openapi.yaml](docs/openapi.yaml)
+- Postman: [docs/postman_collection.json](docs/postman_collection.json)
 
 Проверка проекта:
 

@@ -1,0 +1,262 @@
+{
+  "info": {
+    "_postman_id": "b5e5a3d5-5e2d-4d7a-9b17-7b8627f8cb16",
+    "name": "Notification Service",
+    "description": "Local API collection for the Notification Service test task.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost"
+    },
+    {
+      "key": "api_url",
+      "value": "{{base_url}}/api"
+    },
+    {
+      "key": "notification_id",
+      "value": ""
+    },
+    {
+      "key": "subscriber_id",
+      "value": "customer@example.com"
+    },
+    {
+      "key": "trace_id",
+      "value": "trace-postman-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Application health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/up",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "up"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Prometheus metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Queue single email notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('notification_id', json.data.id);",
+                  "  pm.collectionVariables.set('subscriber_id', json.data.subscriber_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Trace-Id",
+                "value": "{{trace_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"order-1001-email\",\n  \"channel\": \"email\",\n  \"priority\": \"marketing\",\n  \"recipient\": \"customer@example.com\",\n  \"subject\": \"Order shipped\",\n  \"body\": \"Your order is on the way.\",\n  \"payload\": {\n    \"order_id\": 1001\n  }\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notifications",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Queue transactional SMS notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Trace-Id",
+                "value": "{{trace_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"login-code-1001\",\n  \"channel\": \"sms\",\n  \"priority\": \"transactional\",\n  \"recipient\": \"+15555550100\",\n  \"body\": \"Your access code is 123456.\"\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notifications",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Queue bulk email campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Trace-Id",
+                "value": "{{trace_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"campaign-42\",\n  \"channel\": \"email\",\n  \"priority\": \"marketing\",\n  \"subject\": \"Sale\",\n  \"body\": \"Sale starts today.\",\n  \"recipients\": [\n    \"first@example.com\",\n    \"second@example.com\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notifications/bulk",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notifications",
+                "bulk"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get notification by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{api_url}}/notifications/{{notification_id}}",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notification_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm notification delivered",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"delivered\"\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notifications/{{notification_id}}/delivery-status",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notification_id}}",
+                "delivery-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm notification dropped",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"dropped\",\n  \"error\": \"Provider rejected recipient.\"\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/notifications/{{notification_id}}/delivery-status",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notification_id}}",
+                "delivery-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get subscriber history",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{api_url}}/subscribers/{{subscriber_id}}/notifications",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "subscribers",
+                "{{subscriber_id}}",
+                "notifications"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use App\Jobs\SendNotificationJob;
@@ -242,6 +244,38 @@ final class NotificationApiTest extends TestCase
 
         $this->assertSame(NotificationStatus::Delivered->value, $message->refresh()->status);
         $this->assertNotNull($message->delivered_at);
+    }
+
+    public function test_delivery_status_is_rolled_back_when_outbox_write_fails(): void
+    {
+        $message = NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
+            'subscriber_id' => 'customer-1',
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
+            'recipient' => 'customer@example.com',
+            'body' => 'Hello.',
+            'status' => NotificationStatus::Sent->value,
+            'queued_at' => Timestamp::now(),
+            'sent_at' => Timestamp::now(),
+        ]);
+
+        $this->app->instance(DomainEventPublisher::class, new class implements DomainEventPublisher
+        {
+            public function publish(DomainEvent $event): void
+            {
+                throw new Exception('Outbox write failed.');
+            }
+        });
+
+        $this->postJson("/api/notifications/{$message->uuid}/delivery-status", [
+            'status' => 'delivered',
+        ])->assertStatus(500);
+
+        $message->refresh();
+
+        $this->assertSame(NotificationStatus::Sent->value, $message->status);
+        $this->assertNull($message->delivered_at);
     }
 
     public function test_subscriber_notification_history_is_returned(): void

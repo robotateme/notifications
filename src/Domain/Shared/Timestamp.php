@@ -1,18 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Domain\Shared;
 
 use DateTimeImmutable;
 use DateTimeInterface;
 use Webmozart\Assert\Assert;
 
+/**
+ * Immutable timestamp value object used by Domain and Application layers.
+ *
+ * Keeps framework date types out of Domain code and exposes explicit formats
+ * for API, persistence and retry scheduling.
+ */
 final readonly class Timestamp
 {
     private function __construct(private DateTimeImmutable $value) {}
 
     public static function now(): self
     {
-        return new self(new DateTimeImmutable());
+        return new self(new DateTimeImmutable);
     }
 
     public static function fromDateTime(DateTimeInterface $value): self

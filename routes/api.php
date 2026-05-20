@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 

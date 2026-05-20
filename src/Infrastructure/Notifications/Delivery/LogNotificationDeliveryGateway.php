@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Infrastructure\Notifications\Delivery;
 
 use Application\Notifications\Ports\NotificationDeliveryGateway;

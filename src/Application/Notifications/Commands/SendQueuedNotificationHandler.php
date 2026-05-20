@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Application\Notifications\Commands;
 
 use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\NotificationDeliveryGateway;
 use Application\Notifications\Ports\NotificationRepository;
+use Application\Notifications\Ports\TransactionManager;
 use Domain\Notifications\Notification;
 use Throwable;
 
@@ -14,6 +17,7 @@ final class SendQueuedNotificationHandler
         private readonly NotificationRepository $notifications,
         private readonly NotificationDeliveryGateway $delivery,
         private readonly DomainEventPublisher $events,
+        private readonly TransactionManager $transactions,
     ) {}
 
     public function handle(string $notificationId, bool $rethrow = true, bool $dropOnFailure = false): void
@@ -33,9 +37,6 @@ final class SendQueuedNotificationHandler
 
         try {
             $this->delivery->send($notification, $this->deliveryIdempotencyKey($notification));
-            $notification->markSent();
-            $this->notifications->save($notification);
-            $this->publishRecordedEvents($notification);
         } catch (Throwable $exception) {
             $notification->recordDeliveryFailure($exception->getMessage());
 
@@ -43,13 +44,17 @@ final class SendQueuedNotificationHandler
                 $notification->markDropped($exception->getMessage());
             }
 
-            $this->notifications->save($notification);
-            $this->publishRecordedEvents($notification);
+            $this->saveWithRecordedEvents($notification);
 
             if ($rethrow) {
                 throw $exception;
             }
+
+            return;
         }
+
+        $notification->markSent();
+        $this->saveWithRecordedEvents($notification);
     }
 
     private function deliveryIdempotencyKey(Notification $notification): string
@@ -57,10 +62,14 @@ final class SendQueuedNotificationHandler
         return "notification-delivery:{$notification->id}";
     }
 
-    private function publishRecordedEvents(Notification $notification): void
+    private function saveWithRecordedEvents(Notification $notification): void
     {
-        foreach ($notification->releaseDomainEvents() as $event) {
-            $this->events->publish($event);
-        }
+        $this->transactions->run(function () use ($notification): void {
+            $this->notifications->save($notification);
+
+            foreach ($notification->releaseDomainEvents() as $event) {
+                $this->events->publish($event);
+            }
+        });
     }
 }

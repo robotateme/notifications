@@ -1,7 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Application\Notifications\Outbox;
 
+/**
+ * Claimed outbox message ready for publication to the broker.
+ */
 final readonly class PendingOutboxMessage
 {
     /**

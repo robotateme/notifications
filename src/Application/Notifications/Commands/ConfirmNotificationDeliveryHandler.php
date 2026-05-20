@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Application\Notifications\Commands;
 
 use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\NotificationRepository;
+use Application\Notifications\Ports\TransactionManager;
 use Domain\Notifications\Notification;
 use Domain\Notifications\NotificationStatus;
 
@@ -12,6 +15,7 @@ final class ConfirmNotificationDeliveryHandler
     public function __construct(
         private readonly NotificationRepository $notifications,
         private readonly DomainEventPublisher $events,
+        private readonly TransactionManager $transactions,
     ) {}
 
     public function handle(ConfirmNotificationDeliveryCommand $command): ?Notification
@@ -28,11 +32,13 @@ final class ConfirmNotificationDeliveryHandler
             default => null,
         };
 
-        $this->notifications->save($notification);
+        $this->transactions->run(function () use ($notification): void {
+            $this->notifications->save($notification);
 
-        foreach ($notification->releaseDomainEvents() as $event) {
-            $this->events->publish($event);
-        }
+            foreach ($notification->releaseDomainEvents() as $event) {
+                $this->events->publish($event);
+            }
+        });
 
         return $notification;
     }

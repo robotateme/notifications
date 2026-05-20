@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Infrastructure\Notifications\Persistence;
 
 use Application\Notifications\Ports\TransactionManager;

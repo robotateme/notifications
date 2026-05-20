@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Infrastructure\Notifications\Identity;
 
 use Application\Notifications\Ports\NotificationIdGenerator;

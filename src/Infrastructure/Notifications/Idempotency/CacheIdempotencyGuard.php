@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Infrastructure\Notifications\Idempotency;
 
 use Application\Notifications\Ports\IdempotencyGuard;

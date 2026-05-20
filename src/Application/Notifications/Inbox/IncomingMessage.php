@@ -1,7 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Application\Notifications\Inbox;
 
+/**
+ * Message envelope received by a Kafka consumer before business handling.
+ *
+ * `eventId` and `consumerName` form the idempotency boundary in the inbox table.
+ */
 final readonly class IncomingMessage
 {
     /**

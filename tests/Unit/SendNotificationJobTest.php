@@ -1,14 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit;
 
 use App\Jobs\SendNotificationJob;
 use App\Models\NotificationMessage;
 use Application\Notifications\Commands\SendQueuedNotificationHandler;
+use Application\Notifications\Ports\DomainEventPublisher;
 use Application\Notifications\Ports\NotificationDeliveryGateway;
 use Domain\Notifications\NotificationChannel;
 use Domain\Notifications\NotificationPriority;
 use Domain\Notifications\NotificationStatus;
+use Domain\Shared\DomainEvent;
 use Domain\Shared\Timestamp;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,6 +50,44 @@ final class SendNotificationJobTest extends TestCase
         $this->assertNotNull($message->processing_at);
         $this->assertNotNull($message->sent_at);
         $this->assertNull($message->last_error);
+    }
+
+    public function test_sent_status_is_rolled_back_when_outbox_write_fails(): void
+    {
+        $message = NotificationMessage::query()->create([
+            'uuid' => self::notificationId(),
+            'subscriber_id' => 'customer@example.com',
+            'channel' => NotificationChannel::Email->value,
+            'priority' => NotificationPriority::Marketing->value,
+            'recipient' => 'customer@example.com',
+            'body' => 'Hello.',
+            'status' => NotificationStatus::Queued->value,
+            'queued_at' => Timestamp::now(),
+        ]);
+
+        $delivery = Mockery::mock(NotificationDeliveryGateway::class);
+        $delivery->shouldReceive('send')->once();
+        $this->app->instance(NotificationDeliveryGateway::class, $delivery);
+        $this->app->instance(DomainEventPublisher::class, new class implements DomainEventPublisher
+        {
+            public function publish(DomainEvent $event): void
+            {
+                throw new Exception('Outbox write failed.');
+            }
+        });
+
+        try {
+            (new SendNotificationJob($message->uuid))->handle($this->app->make(SendQueuedNotificationHandler::class));
+            $this->fail('Expected outbox exception was not thrown.');
+        } catch (Exception $exception) {
+            $this->assertSame('Outbox write failed.', $exception->getMessage());
+        }
+
+        $message->refresh();
+
+        $this->assertSame(NotificationStatus::Queued->value, $message->status);
+        $this->assertSame(1, $message->attempts);
+        $this->assertNull($message->sent_at);
     }
 
     public function test_job_records_failure_and_rethrows_delivery_errors(): void
@@ -122,6 +164,6 @@ final class SendNotificationJobTest extends TestCase
 
     private static function notificationId(): string
     {
-        return (new UuidNotificationIdGenerator())->generate();
+        return (new UuidNotificationIdGenerator)->generate();
     }
 }

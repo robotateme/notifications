@@ -2,6 +2,8 @@
 
 Полная OpenAPI спецификация находится в [openapi.yaml](openapi.yaml).
 
+Postman-коллекция находится в [postman_collection.json](postman_collection.json).
+
 Проверка спецификации:
 
 ```bash

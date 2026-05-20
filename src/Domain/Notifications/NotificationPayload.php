@@ -1,9 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Domain\Notifications;
 
 use JsonSerializable;
 
+/**
+ * Arbitrary provider/domain payload attached to a notification.
+ *
+ * The value is intentionally schema-less at Domain level because concrete
+ * providers can require different metadata.
+ */
 final readonly class NotificationPayload implements JsonSerializable
 {
     /**

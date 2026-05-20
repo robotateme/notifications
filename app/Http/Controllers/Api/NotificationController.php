@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Presenters\NotificationPresenter;
 use App\Http\Requests\ConfirmDeliveryRequest;
 use App\Http\Requests\StoreBulkNotificationsRequest;
 use App\Http\Requests\StoreNotificationRequest;
@@ -10,7 +13,6 @@ use Application\Notifications\Commands\ConfirmNotificationDeliveryHandler;
 use Application\Notifications\Commands\CreateBulkNotificationsHandler;
 use Application\Notifications\Commands\CreateNotificationHandler;
 use Application\Notifications\Ports\NotificationRepository;
-use App\Http\Presenters\NotificationPresenter;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 

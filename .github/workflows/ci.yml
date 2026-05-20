@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: testing
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d testing"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      APP_DEBUG: false
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: testing
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+      CACHE_STORE: array
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      KAFKA_BROKERS: localhost:19092
+      KAFKA_PUBLISHER: log
+      KAFKA_NOTIFICATIONS_TOPIC: notifications.events
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, pdo_pgsql
+          coverage: none
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install OpenAPI validator dependency
+        run: python -m pip install --upgrade pyyaml
+
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-publish
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force --no-interaction
+
+      - name: Check code style
+        run: ./vendor/bin/pint app config database routes src tests bootstrap/app.php --test
+
+      - name: Validate OpenAPI
+        run: python -c "import yaml; yaml.safe_load(open('docs/openapi.yaml', encoding='utf-8'))"
+
+      - name: Run tests
+        run: php artisan test

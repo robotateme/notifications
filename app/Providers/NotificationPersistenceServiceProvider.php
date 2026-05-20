@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use Application\Notifications\Ports\IdempotencyGuard;
@@ -11,8 +13,8 @@ use Application\Notifications\Ports\TransactionManager;
 use Illuminate\Support\ServiceProvider;
 use Infrastructure\Notifications\Events\EloquentInboxMessageRepository;
 use Infrastructure\Notifications\Events\EloquentOutboxMessageRepository;
-use Infrastructure\Notifications\Identity\UuidNotificationIdGenerator;
 use Infrastructure\Notifications\Idempotency\CacheIdempotencyGuard;
+use Infrastructure\Notifications\Identity\UuidNotificationIdGenerator;
 use Infrastructure\Notifications\Persistence\DatabaseTransactionManager;
 use Infrastructure\Notifications\Persistence\EloquentNotificationRepository;
 

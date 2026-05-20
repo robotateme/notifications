@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Application\Notifications\Commands;
 
 use Application\Notifications\Idempotency\IdempotencyKeyFingerprint;
