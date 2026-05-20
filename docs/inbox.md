@@ -1,23 +1,14 @@
-# Inbox Pattern
+# Inbox
 
 Inbox нужен, когда сервис читает события из Kafka.
 
-Kafka может прислать одно и то же сообщение больше одного раза. Это нормально для at-least-once доставки. Без inbox бизнес-логика может выполниться дважды.
+Kafka может прислать одно сообщение повторно: consumer обработал event, но упал до commit offset. После рестарта Kafka отдаст тот же event еще раз.
 
-Пример:
-
-```text
-1. Consumer получил event
-2. Обработал его
-3. Упал до commit offset
-4. Kafka прислала тот же event снова
-```
-
-Inbox не дает повторно выполнить handler для того же события.
+Без inbox бизнес-логика может выполниться дважды.
 
 ## Как работает
 
-У каждого входящего события должен быть стабильный `event_id`. У каждого обработчика есть `consumer_name`.
+Входящее сообщение имеет `event_id`, обработчик имеет `consumer_name`.
 
 Сервис хранит пару:
 
@@ -31,53 +22,24 @@ event_id + consumer_name
 
 ```text
 Kafka event
- -> inbox_messages: processing
+ -> inbox: processing
  -> business handler
- -> inbox_messages: processed
+ -> inbox: processed
 ```
 
-Если handler упал:
+Если handler упал, статус становится `failed`. Такой event можно обработать снова.
 
-```text
-inbox_messages: failed
-```
+Если event уже `processing` или `processed`, handler не запускается.
 
-Такое сообщение можно обработать снова при следующей доставке.
+## Код
 
-Если тот же event уже `processing` или `processed`, handler не запускается.
-
-## Зачем consumer_name
-
-Один и тот же `event_id` может быть нужен разным consumers.
-
-Например:
-
-```text
-event_id = abc-123
-consumer_name = delivery-status-consumer
-consumer_name = analytics-consumer
-```
-
-Для каждого consumer-а обработка независимая.
-
-## Где код
-
-- `database/migrations/2026_05_20_000000_create_inbox_messages_table.php`
-- `app/Models/InboxMessage.php`
-- `src/Application/Notifications/Inbox/IncomingMessage.php`
 - `src/Application/Notifications/Commands/ProcessInboxMessageHandler.php`
 - `src/Application/Notifications/Ports/InboxMessageRepository.php`
 - `src/Infrastructure/Notifications/Events/EloquentInboxMessageRepository.php`
+- `database/migrations/2026_05_20_000000_create_inbox_messages_table.php`
 
 Проверка:
 
 ```bash
 docker compose exec laravel.test php artisan test tests/Feature/InboxMessageIntegrationTest.php
-```
-
-Коротко:
-
-```text
-Outbox - наши события не потерять до Kafka.
-Inbox - чужие события из Kafka не выполнить дважды.
 ```

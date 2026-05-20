@@ -2,19 +2,14 @@
 
 [![CI](https://github.com/robotateme/notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/robotateme/notifications/actions/workflows/ci.yml)
 
-Микросервис уведомлений для массовой отправки Email/SMS/Push сообщений с приоритетами, идемпотентностью, outbox-публикацией событий в Kafka и отслеживанием статусов доставки.
+Микросервис уведомлений для Email/SMS/Push: API принимает уведомления, Laravel Queue отправляет их provider-у, Kafka получает события о статусах через outbox.
 
-## Быстрый Старт
-
-Требования:
-
-- Docker и Docker Compose
-- Make
-
-Запуск локального окружения:
+## Быстрый старт
 
 ```bash
 make up
+make validate
+make test
 ```
 
 После старта:
@@ -22,14 +17,6 @@ make up
 - API: `http://localhost/api`
 - Kafka UI: `http://localhost:8081`
 - OpenAPI: [docs/openapi.yaml](docs/openapi.yaml)
-- Postman: [docs/postman_collection.json](docs/postman_collection.json)
-
-Проверка проекта:
-
-```bash
-make validate
-make test
-```
 
 Остановка:
 
@@ -37,33 +24,25 @@ make test
 make down
 ```
 
+## Что внутри
+
+- Single и bulk notification API.
+- Приоритеты: `transactional` идет в `notifications-high`, `marketing` - в `notifications`.
+- Статусы: `queued`, `sent`, `delivered`, `dropped`.
+- Idempotency key для защиты от дублей API.
+- Outbox для надежной публикации событий в Kafka.
+- Inbox для идемпотентной обработки входящих Kafka events.
+- Retry/DLQ для outbox.
+- Trace id для связи HTTP, queue, outbox и Kafka.
+
 ## Документация
 
-- [Локальный запуск и команды](docs/local-development.md)
-- [API и OpenAPI](docs/api.md)
+- [Локальный запуск](docs/local-development.md)
+- [API](docs/api.md)
 - [Архитектура](docs/architecture.md)
-- [Reliability, Outbox, DLQ](docs/reliability.md)
-- [Inbox pattern для Kafka consumer](docs/inbox.md)
-
-## Основные Возможности
-
-- Массовая отправка Email/SMS уведомлений.
-- Single notification API для Email/SMS/Push.
-- Приоритетные очереди: `transactional` обгоняет `marketing`.
-- Статусы доставки: `queued`, `sent`, `delivered`, `dropped`.
-- История уведомлений по подписчику.
-- Idempotency key для защиты от повторного создания уведомлений.
-- Transactional outbox для публикации domain events в Kafka.
-- Inbox pattern для идемпотентной обработки входящих Kafka events.
-- Retry, claim locking и dead-letter status для outbox.
-- Интеграционные и архитектурные тесты.
+- [Reliability и Outbox](docs/reliability.md)
+- [Inbox](docs/inbox.md)
 
 ## Стек
 
-- PHP 8.4
-- Laravel 13
-- PostgreSQL
-- Redis queue/cache locks
-- Apache Kafka
-- Kafka UI
-- Docker Compose
+PHP 8.4, Laravel 13, PostgreSQL, Redis, Kafka, Docker Compose.

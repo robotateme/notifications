@@ -1,42 +1,39 @@
-# Локальный Запуск
+# Локальный запуск
 
-## Требования
+Требования: Docker, Docker Compose, Make.
 
-- Docker и Docker Compose
-- Make
-
-## Первый Старт
+## Старт
 
 ```bash
 make up
 ```
 
-Команда собирает app image и поднимает:
+Поднимаются:
 
-- `laravel.test` - HTTP API;
+- `laravel.test` - API;
 - `pgsql` - PostgreSQL;
 - `redis` - queue/cache locks;
-- `kafka` - Kafka broker;
-- `kafka-ui` - UI для Kafka;
-- `queue.worker` - Laravel queue worker;
-- `outbox.publisher` - периодическая публикация outbox events.
+- `kafka` и `kafka-ui`;
+- `queue.worker` - отправка уведомлений;
+- `outbox.publisher` - публикация outbox events в Kafka.
 
 Адреса:
 
 - API: `http://localhost/api`
 - Kafka UI: `http://localhost:8081`
+- Metrics: `http://localhost/metrics`
 
-## Команды
+## Основные команды
 
 ```bash
 make status
 make logs
-make app-logs
-make queue-logs
-make outbox-logs
+make test
+make validate
+make down
 ```
 
-Схема БД:
+## БД
 
 ```bash
 make migrate
@@ -44,62 +41,17 @@ make fresh
 make fresh-seed
 ```
 
-Тесты и проверки:
-
-```bash
-make test
-make test-unit
-make test-feature
-make validate
-make openapi
-make pint
-```
-
-Точечная проверка inbox pattern:
-
-```bash
-docker compose exec laravel.test php artisan test tests/Feature/InboxMessageIntegrationTest.php
-```
-
-Ручной запуск процессов:
+## Ручные процессы
 
 ```bash
 make queue
 make outbox
-make outbox-dead
-make outbox-dead LIMIT=100 PAGE=2
-make outbox-retry-dead ID=1
+make outbox-dead LIMIT=50 PAGE=1
+make outbox-retry-dead ID=<outbox-id>
 ```
 
-Остановка:
+Worker слушает очереди в порядке:
 
-```bash
-make down
+```text
+notifications-high,notifications
 ```
-
-## Очереди
-
-- `notifications-high` - transactional уведомления.
-- `notifications` - marketing уведомления.
-
-Worker слушает обе очереди:
-
-```bash
-php artisan queue:work --queue=notifications-high,notifications --tries=3
-```
-
-## Kafka
-
-Outbox publisher публикует domain events в Kafka через `kcat` внутри app-контейнера.
-
-Разовая публикация:
-
-```bash
-make outbox
-```
-
-Kafka UI доступен на `http://localhost:8081`.
-
-Prometheus-compatible метрики доступны на `http://localhost/metrics`.
-
-Входящие Kafka events должны обрабатываться через inbox pattern. В проекте уже есть Application handler и Infrastructure repository для атомарной дедубликации по паре `event_id` + `consumer_name`; отдельный long-running consumer command можно добавить поверх этого контракта без изменения Domain.

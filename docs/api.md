@@ -1,10 +1,10 @@
 # API
 
-Полная OpenAPI спецификация находится в [openapi.yaml](openapi.yaml).
+OpenAPI: [openapi.yaml](openapi.yaml)
 
-Postman-коллекция находится в [postman_collection.json](postman_collection.json).
+Postman: [postman_collection.json](postman_collection.json)
 
-Проверка спецификации:
+Проверка:
 
 ```bash
 make openapi
@@ -37,12 +37,6 @@ curl -X POST http://localhost/api/notifications \
   }'
 ```
 
-Если `idempotency_key` уже использовался, API вернет существующее уведомление без повторной постановки в очередь.
-
-Оригинальный `idempotency_key` не хранится в базе. Для поиска дубликатов сервис сохраняет SHA-256 fingerprint ключа.
-
-`X-Trace-Id` опционален. Если он передан, сервис сохраняет его в notification, queue job, outbox и Kafka payload. Если заголовок не передан, сервис генерирует trace id сам.
-
 ## Bulk Notification
 
 ```bash
@@ -58,22 +52,6 @@ curl -X POST http://localhost/api/notifications/bulk \
   }'
 ```
 
-Для bulk-запроса idempotency key расширяется до per-recipient ключа, чтобы повтор запроса не создавал дубликаты по каждому получателю.
-В БД сохраняется только SHA-256 fingerprint расширенного ключа.
-
-## Priority
-
-```json
-{
-  "channel": "sms",
-  "priority": "transactional",
-  "body": "Your access code is 123456.",
-  "recipients": ["+15555550100"]
-}
-```
-
-`transactional` уведомления попадают в `notifications-high`, `marketing` - в `notifications`.
-
 ## Delivery Status
 
 ```bash
@@ -82,17 +60,13 @@ curl -X POST http://localhost/api/notifications/{notification}/delivery-status \
   -d '{"status": "delivered"}'
 ```
 
-Допустимые статусы callback-а:
+Допустимые callback-статусы:
 
 - `delivered`
 - `dropped`
-
-Для `dropped` можно передать `error`.
 
 ## Subscriber History
 
 ```bash
 curl http://localhost/api/subscribers/customer@example.com/notifications
 ```
-
-Возвращает все известные уведомления подписчика с текущими статусами и временными метками.

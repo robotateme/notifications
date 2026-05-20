@@ -1,104 +1,45 @@
 # Архитектура
 
-Проект организован по DDD/CQRS/Hexagonal principles.
-
-## Слои
+Проект разделен по DDD/Hexagonal подходу, чтобы бизнес-логика не зависела от Laravel, БД и Kafka.
 
 ```text
-app/
-  Http/          Laravel HTTP layer: controllers, requests, presenters
-  Jobs/          Laravel queue jobs
-  Models/        Eloquent persistence records
-  Providers/     DI bindings
-
-src/
-  Domain/        Aggregate, enums, value objects, domain events
-  Application/   Commands, handlers, ports
-  Infrastructure Adapters for persistence, queue, Kafka, idempotency
+app/              HTTP, Jobs, Eloquent models, Service Providers
+src/Domain        Aggregate, enums, value objects, domain events
+src/Application   Commands, handlers, ports
+src/Infrastructure Adapters: Eloquent, Redis, Queue, Kafka, Outbox, Inbox
 ```
 
-## Dependency Rule
+## Правило зависимостей
 
 - `Domain` не зависит от Laravel, Application или Infrastructure.
 - `Application` зависит от Domain и ports.
-- `Infrastructure` реализует Application ports.
-- `app` связывает Laravel framework с Application use cases.
+- `Infrastructure` реализует ports.
+- `app` связывает Laravel с use cases.
 
-Это закреплено архитектурным тестом:
+Проверка:
 
 ```bash
 docker compose exec laravel.test php artisan test tests/Unit/ArchitectureBoundaryTest.php
 ```
 
-## Domain
+## Основной поток
 
-Ключевые элементы:
+```text
+HTTP API
+ -> Application handler
+ -> Domain Notification
+ -> PostgreSQL
+ -> Laravel Queue
+ -> Delivery Gateway
+ -> Outbox
+ -> Kafka
+```
 
-- `Notification` - aggregate root.
-- `NotificationId` - UUID value object.
-- `NotificationPayload` - payload value object.
-- `Timestamp` - time value object.
-- `NotificationChannel`, `NotificationPriority`, `NotificationStatus` - enums.
-- Domain events: queued, sent, delivered, dropped.
+Kafka здесь получает события о статусах notification, а не сами задачи на отправку.
 
-Domain не генерирует UUID и не использует Eloquent/Carbon/Laravel facade.
+## Outbox / Inbox
 
-## Application
+- Outbox: наши события не потерять до Kafka.
+- Inbox: чужие события из Kafka не выполнить дважды.
 
-Application слой содержит use cases:
-
-- `CreateNotificationHandler`
-- `CreateBulkNotificationsHandler`
-- `SendQueuedNotificationHandler`
-- `ConfirmNotificationDeliveryHandler`
-- `PublishOutboxMessagesHandler`
-
-Ports:
-
-- `NotificationRepository`
-- `NotificationQueue`
-- `NotificationDeliveryGateway`
-- `DomainEventPublisher`
-- `OutboxMessageRepository`
-- `InboxMessageRepository`
-- `MessageBroker`
-- `IdempotencyGuard`
-- `NotificationIdGenerator`
-- `TransactionManager`
-
-## Infrastructure
-
-Infrastructure слой содержит адаптеры:
-
-- Eloquent repositories и mappers.
-- Eloquent casts для value objects.
-- Laravel queue adapter.
-- Kafka broker adapter через `kcat`.
-- Outbox repository с claim locking и retry.
-- Inbox repository для идемпотентной обработки входящих Kafka events.
-- Cache lock based idempotency guard.
-- UUID generator на `ramsey/uuid`.
-
-## HTTP Layer
-
-HTTP слой тонкий:
-
-- FormRequest валидирует входные данные и собирает command DTO.
-- Controller вызывает handler.
-- Presenter превращает domain object в JSON response.
-
-## Process Patterns
-
-Outbox и Inbox закрывают разные стороны Kafka-интеграции:
-
-- Outbox отвечает за надежную публикацию domain events из сервиса наружу.
-- Inbox отвечает за идемпотентную обработку входящих events от других сервисов.
-
-Inbox намеренно находится в Application/Infrastructure:
-
-- `Application\Notifications\Inbox\IncomingMessage` описывает входящее сообщение.
-- `Application\Notifications\Ports\InboxMessageRepository` задает атомарный контракт `handleOnce`.
-- `Application\Notifications\Commands\ProcessInboxMessageHandler` запускает бизнес-обработчик только один раз на `event_id`.
-- `Infrastructure\Notifications\Events\EloquentInboxMessageRepository` хранит состояние обработки в `inbox_messages`.
-
-Подробное описание: [Inbox pattern](inbox.md).
+Подробности: [reliability.md](reliability.md), [inbox.md](inbox.md).
