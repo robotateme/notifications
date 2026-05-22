@@ -1,5 +1,10 @@
 DC := docker compose
 APP := laravel.test
+WWWGROUP := $(shell id -g)
+WWWUSER := $(shell id -u)
+
+export WWWGROUP
+export WWWUSER
 
 .PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi outbox outbox-dead outbox-retry-dead queue status ps
 

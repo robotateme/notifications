@@ -3,10 +3,13 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-}'
+                WWWUSER: '${WWWUSER:-}'
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
-            - '${APP_PORT:-80}:80'
+            - '${APP_PORT:-80}:8000'
             - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
         working_dir: /var/www/html
         command: >
@@ -14,9 +17,10 @@ services:
             test -f .env || cp .env.example .env &&
             php artisan key:generate --force --no-interaction &&
             php artisan migrate --force &&
-            php artisan serve --host=0.0.0.0 --port=80"
+            php artisan serve --host=0.0.0.0 --port=8000"
         environment:
-            WWWUSER: '${WWWUSER:-1000}'
+            WWWUSER: '${WWWUSER:-}'
+            WWWGROUP: '${WWWGROUP:-}'
             LARAVEL_SAIL: 1
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
@@ -36,12 +40,16 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-}'
+                WWWUSER: '${WWWUSER:-}'
         working_dir: /var/www/html
         command: >
             sh -c "while [ ! -f vendor/autoload.php ]; do sleep 1; done &&
             php artisan queue:work --queue=notifications-high,notifications --tries=3"
         environment:
-            WWWUSER: '${WWWUSER:-1000}'
+            WWWUSER: '${WWWUSER:-}'
+            WWWGROUP: '${WWWGROUP:-}'
             LARAVEL_SAIL: 1
         volumes:
             - '.:/var/www/html'
@@ -54,12 +62,16 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-}'
+                WWWUSER: '${WWWUSER:-}'
         working_dir: /var/www/html
         command: >
             sh -c "while [ ! -f vendor/autoload.php ]; do sleep 1; done &&
             while true; do php artisan outbox:publish --limit=100; sleep 5; done"
         environment:
-            WWWUSER: '${WWWUSER:-1000}'
+            WWWUSER: '${WWWUSER:-}'
+            WWWGROUP: '${WWWGROUP:-}'
             LARAVEL_SAIL: 1
         volumes:
             - '.:/var/www/html'
