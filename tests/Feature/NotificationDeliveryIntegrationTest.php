@@ -92,6 +92,47 @@ final class NotificationDeliveryIntegrationTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_outbox_publish_failure_is_retryable(): void
+    {
+        $this->postJson('/api/notifications/bulk', [
+            'channel' => 'email',
+            'priority' => NotificationPriority::Marketing->value,
+            'message' => 'Service window starts tonight.',
+            'recipients' => ['subscriber@example.com'],
+        ])->assertAccepted();
+
+        $broker = Mockery::mock(MessageBroker::class);
+        $broker->shouldReceive('publish')->once()->andThrow(new Exception('Kafka is unavailable.'));
+        $this->app->instance(MessageBroker::class, $broker);
+
+        $this->artisan('outbox:publish', ['--limit' => 100])
+            ->expectsOutput('Published 0 outbox message(s).')
+            ->assertExitCode(0);
+
+        $outbox = OutboxMessage::query()->firstOrFail();
+
+        $this->assertSame(OutboxMessageStatus::Failed->value, $outbox->status);
+        $this->assertSame(1, $outbox->attempts);
+        $this->assertNotNull($outbox->available_at);
+        $this->assertSame('Kafka is unavailable.', $outbox->last_error);
+
+        $outbox->forceFill(['available_at' => Timestamp::fromString('-1 second')])->save();
+
+        $broker = Mockery::mock(MessageBroker::class);
+        $broker->shouldReceive('publish')->once();
+        $this->app->instance(MessageBroker::class, $broker);
+
+        $this->artisan('outbox:publish', ['--limit' => 100])
+            ->expectsOutput('Published 1 outbox message(s).')
+            ->assertExitCode(0);
+
+        $outbox->refresh();
+
+        $this->assertSame(OutboxMessageStatus::Published->value, $outbox->status);
+        $this->assertSame(1, $outbox->attempts);
+        $this->assertNull($outbox->available_at);
+    }
+
     public function test_outbox_message_is_moved_to_dead_status_after_retry_limit(): void
     {
         $this->postJson('/api/notifications/bulk', [
