@@ -6,33 +6,36 @@ WWWUSER := $(shell id -u)
 export WWWGROUP
 export WWWUSER
 
-.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi outbox outbox-dead outbox-retry-dead queue status ps
+.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi load-test load-test-docker load-report outbox outbox-dead outbox-retry-dead queue status ps
 
 help:
-	@echo "Available commands:"
-	@echo "  make up           Start the full local stack"
-	@echo "  make down         Stop containers"
-	@echo "  make restart      Restart the stack"
-	@echo "  make logs         Follow all logs"
-	@echo "  make app-logs     Follow app logs"
-	@echo "  make queue-logs   Follow queue worker logs"
-	@echo "  make outbox-logs  Follow outbox publisher logs"
-	@echo "  make shell        Open a shell in the app container"
-	@echo "  make install      Install Composer dependencies in container"
-	@echo "  make migrate      Run migrations"
-	@echo "  make fresh        Recreate schema"
-	@echo "  make fresh-seed   Recreate schema and seed data"
-	@echo "  make test         Run automated tests"
-	@echo "  make test-unit    Run unit tests"
-	@echo "  make test-feature Run feature tests"
-	@echo "  make pint         Format PHP code"
-	@echo "  make validate     Validate composer.json, compose config and OpenAPI"
-	@echo "  make openapi      Validate docs/openapi.yaml"
-	@echo "  make outbox       Publish pending outbox messages once"
-	@echo "  make outbox-dead  List dead outbox messages, supports LIMIT=50 PAGE=1"
-	@echo "  make outbox-retry-dead ID=1 Return a dead outbox message to pending"
-	@echo "  make queue        Run queue worker in the foreground"
-	@echo "  make status       Show containers"
+	@echo "Команды:"
+	@echo "  make up           Поднять локальный стек"
+	@echo "  make down         Остановить контейнеры"
+	@echo "  make restart      Перезапустить стек"
+	@echo "  make logs         Смотреть все логи"
+	@echo "  make app-logs     Смотреть логи приложения"
+	@echo "  make queue-logs   Смотреть логи queue worker"
+	@echo "  make outbox-logs  Смотреть логи outbox publisher"
+	@echo "  make shell        Открыть shell в app-контейнере"
+	@echo "  make install      Поставить Composer-зависимости"
+	@echo "  make migrate      Накатить миграции"
+	@echo "  make fresh        Пересоздать схему"
+	@echo "  make fresh-seed   Пересоздать схему и seed-данные"
+	@echo "  make test         Прогнать тесты"
+	@echo "  make test-unit    Прогнать unit-тесты"
+	@echo "  make test-feature Прогнать feature-тесты"
+	@echo "  make pint         Отформатировать PHP-код"
+	@echo "  make validate     Проверить composer.json, compose config и OpenAPI"
+	@echo "  make openapi      Проверить docs/openapi.yaml"
+	@echo "  make load-test    Прогнать k6 локально"
+	@echo "  make load-test-docker Прогнать k6 через Docker"
+	@echo "  make load-report  Показать последний HTML-отчет k6"
+	@echo "  make outbox       Опубликовать pending outbox один раз"
+	@echo "  make outbox-dead  Показать dead outbox, LIMIT=50 PAGE=1"
+	@echo "  make outbox-retry-dead ID=1 Вернуть dead outbox в pending"
+	@echo "  make queue        Запустить queue worker в foreground"
+	@echo "  make status       Показать контейнеры"
 
 up:
 	$(DC) up -d --build
@@ -96,6 +99,41 @@ validate: openapi
 openapi:
 	python3 -c "import yaml; yaml.safe_load(open('docs/openapi.yaml', encoding='utf-8'))"
 
+load-test:
+	@command -v k6 >/dev/null 2>&1 || (echo "k6 не найден. Запусти 'make load-test-docker' или поставь k6 локально." && exit 127)
+	@mkdir -p reports/load
+	@run_id=$${REPORT_RUN_ID:-$$(date +%Y%m%d-%H%M%S)}; \
+	REPORT_DIR=$${REPORT_DIR:-reports/load} REPORT_RUN_ID=$$run_id k6 run tests/load/notifications.js; \
+	status=$$?; \
+	echo "Отчеты сохранены в reports/load/notifications-$$run_id.{html,json} и reports/load/latest.{html,json}"; \
+	exit $$status
+
+load-test-docker:
+	@mkdir -p reports/load
+	@run_id=$${REPORT_RUN_ID:-$$(date +%Y%m%d-%H%M%S)}; \
+	docker run --rm --network host --user "$$(id -u):$$(id -g)" \
+		-e BASE_URL=$${BASE_URL:-http://localhost/api} \
+		-e RATE=$${RATE:-5} \
+		-e DURATION=$${DURATION:-30s} \
+		-e PRE_ALLOCATED_VUS=$${PRE_ALLOCATED_VUS:-5} \
+		-e MAX_VUS=$${MAX_VUS:-20} \
+		-e BULK_RECIPIENTS=$${BULK_RECIPIENTS:-10} \
+		-e THINK_TIME_SECONDS=$${THINK_TIME_SECONDS:-0.2} \
+		-e REPORT_DIR=/reports \
+		-e REPORT_RUN_ID=$$run_id \
+		-v "$(CURDIR)/tests/load:/scripts:ro" \
+		-v "$(CURDIR)/reports/load:/reports" \
+		grafana/k6 run /scripts/notifications.js; \
+	status=$$?; \
+	echo "Отчеты сохранены в reports/load/notifications-$$run_id.{html,json} и reports/load/latest.{html,json}"; \
+	exit $$status
+
+load-report:
+	@latest=$$(ls -t reports/load/*.html 2>/dev/null | head -n 1); \
+	test -n "$$latest" || (echo "Отчеты k6 не найдены в reports/load" && exit 1); \
+	echo "Последний отчет k6: $$latest"; \
+	if command -v xdg-open >/dev/null 2>&1; then xdg-open "$$latest" >/dev/null 2>&1 || true; fi
+
 outbox:
 	$(DC) exec $(APP) php artisan outbox:publish --limit=100
 
@@ -103,7 +141,7 @@ outbox-dead:
 	$(DC) exec $(APP) php artisan outbox:dead --limit=$${LIMIT:-50} --page=$${PAGE:-1}
 
 outbox-retry-dead:
-	@test -n "$(ID)" || (echo "Usage: make outbox-retry-dead ID=<outbox-id>" && exit 1)
+	@test -n "$(ID)" || (echo "Используй: make outbox-retry-dead ID=<outbox-id>" && exit 1)
 	$(DC) exec $(APP) php artisan outbox:retry-dead $(ID)
 
 queue:
