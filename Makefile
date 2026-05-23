@@ -6,7 +6,7 @@ WWWUSER := $(shell id -u)
 export WWWGROUP
 export WWWUSER
 
-.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature pint validate openapi load-test load-test-docker load-report outbox outbox-dead outbox-retry-dead queue status ps
+.PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature phpstan pint validate openapi load-test load-test-docker load-report outbox outbox-dead outbox-retry-dead queue status ps
 
 help:
 	@echo "Команды:"
@@ -25,8 +25,9 @@ help:
 	@echo "  make test         Прогнать тесты"
 	@echo "  make test-unit    Прогнать unit-тесты"
 	@echo "  make test-feature Прогнать feature-тесты"
+	@echo "  make phpstan      Прогнать PHPStan на level 8"
 	@echo "  make pint         Отформатировать PHP-код"
-	@echo "  make validate     Проверить composer.json, compose config и OpenAPI"
+	@echo "  make validate     Проверить OpenAPI, composer.json, compose config и PHPStan"
 	@echo "  make openapi      Проверить docs/openapi.yaml"
 	@echo "  make load-test    Прогнать k6 локально"
 	@echo "  make load-test-docker Прогнать k6 через Docker"
@@ -89,10 +90,13 @@ test-feature:
 	$(DC) start queue.worker outbox.publisher >/dev/null; \
 	exit $$status
 
+phpstan:
+	$(DC) exec $(APP) ./vendor/bin/phpstan analyse --memory-limit=1G
+
 pint:
 	$(DC) exec $(APP) ./vendor/bin/pint app src tests routes config database/migrations
 
-validate: openapi
+validate: openapi phpstan
 	composer validate --strict --no-check-publish
 	$(DC) config --quiet
 

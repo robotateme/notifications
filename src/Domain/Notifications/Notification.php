@@ -40,6 +40,9 @@ final class Notification
         public ?string $lastError = null,
     ) {}
 
+    /**
+     * @param  array<string, mixed>|null  $payload
+     */
     public static function queue(
         string $id,
         ?string $idempotencyKey,

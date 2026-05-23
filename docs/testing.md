@@ -28,6 +28,15 @@ make test-feature
 docker compose exec laravel.test php artisan test tests/Feature/NotificationApiTest.php
 ```
 
+## PHPStan
+
+```bash
+make phpstan
+```
+
+Уровень 8. Проверяется продуктовый код: `app`, `config`, `database`, `routes`, `src`.
+`make validate` тоже гоняет PHPStan.
+
 - `tests/Unit` - доменные правила, gateway/broker adapter-ы и архитектурные границы;
 - `tests/Feature` - API, очередь отправки уведомлений, provider mock, inbox, outbox retry/DLQ.
 

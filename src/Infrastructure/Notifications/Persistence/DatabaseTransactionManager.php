@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 final class DatabaseTransactionManager implements TransactionManager
 {
+    /**
+     * @template TReturn
+     *
+     * @param  Closure(): TReturn  $callback
+     * @return TReturn
+     */
     public function run(Closure $callback): mixed
     {
         return DB::transaction($callback);

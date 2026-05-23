@@ -19,6 +19,7 @@
 /public/storage
 /reports/*
 /storage/*.key
+/storage/phpstan
 /storage/pail
 /testing
 /vendor

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 /**
- * @implements CastsAttributes<Timestamp|null, DateTimeInterface|Timestamp|string|null>
+ * @implements CastsAttributes<Timestamp|null, mixed>
  */
 final class TimestampCast implements CastsAttributes
 {

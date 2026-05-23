@@ -25,6 +25,7 @@ make up
 make status
 make logs
 make test
+make phpstan
 make validate
 ```
 

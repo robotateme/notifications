@@ -8,6 +8,20 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
 
+/**
+ * @property int $id
+ * @property string $event_id
+ * @property string $topic
+ * @property string $event_name
+ * @property string $aggregate_id
+ * @property string|null $trace_id
+ * @property array<string, mixed> $payload
+ * @property string $status
+ * @property int $attempts
+ * @property \Domain\Shared\Timestamp|null $available_at
+ * @property \Domain\Shared\Timestamp|null $published_at
+ * @property string|null $last_error
+ */
 #[Fillable([
     'event_id',
     'topic',
