@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Domain\Notifications\NotificationPayload;
+use Domain\Shared\Timestamp;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Infrastructure\Notifications\Persistence\Casts\NotificationPayloadCast;
@@ -19,14 +21,14 @@ use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
  * @property string $recipient
  * @property string|null $subject
  * @property string|null $body
- * @property \Domain\Notifications\NotificationPayload|null $payload
+ * @property NotificationPayload|null $payload
  * @property string $status
  * @property int $attempts
- * @property \Domain\Shared\Timestamp $queued_at
- * @property \Domain\Shared\Timestamp|null $processing_at
- * @property \Domain\Shared\Timestamp|null $sent_at
- * @property \Domain\Shared\Timestamp|null $delivered_at
- * @property \Domain\Shared\Timestamp|null $dropped_at
+ * @property Timestamp $queued_at
+ * @property Timestamp|null $processing_at
+ * @property Timestamp|null $sent_at
+ * @property Timestamp|null $delivered_at
+ * @property Timestamp|null $dropped_at
  * @property string|null $last_error
  */
 #[Fillable([

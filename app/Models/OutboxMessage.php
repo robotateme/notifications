@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Domain\Shared\Timestamp;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
@@ -18,8 +19,8 @@ use Infrastructure\Notifications\Persistence\Casts\TimestampCast;
  * @property array<string, mixed> $payload
  * @property string $status
  * @property int $attempts
- * @property \Domain\Shared\Timestamp|null $available_at
- * @property \Domain\Shared\Timestamp|null $published_at
+ * @property Timestamp|null $available_at
+ * @property Timestamp|null $published_at
  * @property string|null $last_error
  */
 #[Fillable([
