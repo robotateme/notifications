@@ -2,6 +2,11 @@ DC := docker compose
 APP := laravel.test
 WWWGROUP := $(shell id -g)
 WWWUSER := $(shell id -u)
+RESET := \033[0m
+BOLD := \033[1m
+GREEN := \033[32m
+YELLOW := \033[33m
+CYAN := \033[36m
 
 export WWWGROUP
 export WWWUSER
@@ -9,34 +14,34 @@ export WWWUSER
 .PHONY: help up down restart logs app-logs queue-logs outbox-logs shell install migrate fresh fresh-seed test test-unit test-feature phpstan pint validate openapi load-test load-test-docker load-report outbox outbox-dead outbox-retry-dead queue status ps
 
 help:
-	@echo "Команды:"
-	@echo "  make up           Поднять локальный стек"
-	@echo "  make down         Остановить контейнеры"
-	@echo "  make restart      Перезапустить стек"
-	@echo "  make logs         Смотреть все логи"
-	@echo "  make app-logs     Смотреть логи приложения"
-	@echo "  make queue-logs   Смотреть логи queue worker"
-	@echo "  make outbox-logs  Смотреть логи outbox publisher"
-	@echo "  make shell        Открыть shell в app-контейнере"
-	@echo "  make install      Поставить Composer-зависимости"
-	@echo "  make migrate      Накатить миграции"
-	@echo "  make fresh        Пересоздать схему"
-	@echo "  make fresh-seed   Пересоздать схему и seed-данные"
-	@echo "  make test         Прогнать тесты"
-	@echo "  make test-unit    Прогнать unit-тесты"
-	@echo "  make test-feature Прогнать feature-тесты"
-	@echo "  make phpstan      Прогнать PHPStan на level 8"
-	@echo "  make pint         Отформатировать PHP-код"
-	@echo "  make validate     Проверить OpenAPI, composer.json, compose config и PHPStan"
-	@echo "  make openapi      Проверить docs/openapi.yaml"
-	@echo "  make load-test    Прогнать k6 локально"
-	@echo "  make load-test-docker Прогнать k6 через Docker"
-	@echo "  make load-report  Показать последний HTML-отчет k6"
-	@echo "  make outbox       Опубликовать pending outbox один раз"
-	@echo "  make outbox-dead  Показать dead outbox, LIMIT=50 PAGE=1"
-	@echo "  make outbox-retry-dead ID=1 Вернуть dead outbox в pending"
-	@echo "  make queue        Запустить queue worker в foreground"
-	@echo "  make status       Показать контейнеры"
+	@printf "$(BOLD)Команды:$(RESET)\n"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make up" "Поднять локальный стек"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make down" "Остановить контейнеры"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make restart" "Перезапустить стек"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make logs" "Смотреть все логи"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make app-logs" "Смотреть логи приложения"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make queue-logs" "Смотреть логи queue worker"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make outbox-logs" "Смотреть логи outbox publisher"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make shell" "Открыть shell в app-контейнере"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make install" "Поставить Composer-зависимости"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make migrate" "Накатить миграции"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make fresh" "Пересоздать схему"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make fresh-seed" "Пересоздать схему и seed-данные"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make test" "Прогнать тесты"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make test-unit" "Прогнать unit-тесты"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make test-feature" "Прогнать feature-тесты"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make phpstan" "Прогнать PHPStan на level 8"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make pint" "Отформатировать PHP-код"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make validate" "Проверить OpenAPI, composer.json, compose config и PHPStan"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make openapi" "Проверить docs/openapi.yaml"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make load-test" "Прогнать k6 локально"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make load-test-docker" "Прогнать k6 через Docker"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make load-report" "Показать последний HTML-отчет k6"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make outbox" "Опубликовать pending outbox один раз"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make outbox-dead" "Показать dead outbox, LIMIT=50 PAGE=1"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make outbox-retry-dead ID=1" "Вернуть dead outbox в pending"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make queue" "Запустить queue worker в foreground"
+	@printf "  $(CYAN)%-30s$(RESET) %s\n" "make status" "Показать контейнеры"
 
 up:
 	$(DC) up -d --build
@@ -104,12 +109,12 @@ openapi:
 	python3 -c "import yaml; yaml.safe_load(open('docs/openapi.yaml', encoding='utf-8'))"
 
 load-test:
-	@command -v k6 >/dev/null 2>&1 || (echo "k6 не найден. Запусти 'make load-test-docker' или поставь k6 локально." && exit 127)
+	@command -v k6 >/dev/null 2>&1 || (printf "$(YELLOW)k6 не найден. Запусти 'make load-test-docker' или поставь k6 локально.$(RESET)\n" && exit 127)
 	@mkdir -p reports/load
 	@run_id=$${REPORT_RUN_ID:-$$(date +%Y%m%d-%H%M%S)}; \
 	REPORT_DIR=$${REPORT_DIR:-reports/load} REPORT_RUN_ID=$$run_id k6 run tests/load/notifications.js; \
 	status=$$?; \
-	echo "Отчеты сохранены в reports/load/notifications-$$run_id.{html,json} и reports/load/latest.{html,json}"; \
+	printf "$(GREEN)Отчеты сохранены в reports/load/notifications-$$run_id.{html,json} и reports/load/latest.{html,json}$(RESET)\n"; \
 	exit $$status
 
 load-test-docker:
@@ -129,13 +134,13 @@ load-test-docker:
 		-v "$(CURDIR)/reports/load:/reports" \
 		grafana/k6 run /scripts/notifications.js; \
 	status=$$?; \
-	echo "Отчеты сохранены в reports/load/notifications-$$run_id.{html,json} и reports/load/latest.{html,json}"; \
+	printf "$(GREEN)Отчеты сохранены в reports/load/notifications-$$run_id.{html,json} и reports/load/latest.{html,json}$(RESET)\n"; \
 	exit $$status
 
 load-report:
 	@latest=$$(ls -t reports/load/*.html 2>/dev/null | head -n 1); \
-	test -n "$$latest" || (echo "Отчеты k6 не найдены в reports/load" && exit 1); \
-	echo "Последний отчет k6: $$latest"; \
+	test -n "$$latest" || (printf "$(YELLOW)Отчеты k6 не найдены в reports/load$(RESET)\n" && exit 1); \
+	printf "$(GREEN)Последний отчет k6: $$latest$(RESET)\n"; \
 	if command -v xdg-open >/dev/null 2>&1; then xdg-open "$$latest" >/dev/null 2>&1 || true; fi
 
 outbox:
@@ -145,7 +150,7 @@ outbox-dead:
 	$(DC) exec $(APP) php artisan outbox:dead --limit=$${LIMIT:-50} --page=$${PAGE:-1}
 
 outbox-retry-dead:
-	@test -n "$(ID)" || (echo "Используй: make outbox-retry-dead ID=<outbox-id>" && exit 1)
+	@test -n "$(ID)" || (printf "$(YELLOW)Используй: make outbox-retry-dead ID=<outbox-id>$(RESET)\n" && exit 1)
 	$(DC) exec $(APP) php artisan outbox:retry-dead $(ID)
 
 queue:
