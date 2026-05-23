@@ -1,8 +1,4 @@
-# Reliability
-
-Сервис живет в at-least-once мире: HTTP-запрос, queue job или Kafka event могут повториться.
-
-Коротко:
+# Надежность
 
 ```text
 Outbox - наши события не потерять до Kafka.
@@ -22,13 +18,10 @@ API
  -> Kafka
 ```
 
-Kafka получает события о статусах, а не сами уведомления на отправку.
-
 ## Outbox
 
-Outbox нужен, чтобы БД и Kafka не разъехались.
-
-Когда меняется `Notification`, сервис в той же DB transaction пишет событие в `outbox_messages`. Если транзакция упала, откатываются и бизнес-изменение, и событие.
+Когда меняется `Notification`, сервис в той же DB transaction пишет event в `outbox_messages`.
+Транзакция упала - откатились и данные, и event.
 
 `outbox.publisher` читает `outbox_messages` и публикует события в Kafka:
 
@@ -38,11 +31,20 @@ outbox_messages -> outbox.publisher -> Kafka
 
 Если Kafka недоступна, событие остается в БД и будет отправлено позже.
 
+### Проверка падения Kafka
+
+Kafka не гасим контейнером. В тестах мокается `MessageBroker`: `publish()` кидает
+`Kafka is unavailable.`.
+
+Outbox уходит в `failed`, получает `available_at` для retry, потом публикуется следующим прогоном.
+
+```bash
+docker compose exec laravel.test php artisan test tests/Feature/NotificationDeliveryIntegrationTest.php
+```
+
 ## DLQ
 
-DLQ реализован как статус `dead` в `outbox_messages`.
-
-После 5 ошибок событие больше не публикуется автоматически. В записи остаются `attempts` и `last_error`.
+После 5 ошибок автоматика больше не трогает event. Для разбора есть `attempts` и `last_error`.
 
 ```bash
 make outbox-dead LIMIT=50 PAGE=1
@@ -51,15 +53,14 @@ make outbox-retry-dead ID=<outbox-id>
 
 ## Inbox
 
-Inbox нужен на входе из Kafka. Он хранит пару:
+Ключ дедупликации:
 
 ```text
 event_id + consumer_name
 ```
 
-Если event уже `processed` или сейчас `processing`, handler второй раз не запускается. Если прошлый запуск упал и статус `failed`, event можно обработать снова.
-
-Подробнее: [inbox.md](inbox.md).
+Если event уже `processed` или сейчас `processing`, handler второй раз не запускается.
+Если прошлый запуск упал и статус `failed`, event можно прогнать снова.
 
 ## Остальная защита
 

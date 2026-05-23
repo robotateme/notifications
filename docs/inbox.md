@@ -1,14 +1,9 @@
 # Inbox
 
-Inbox нужен, когда сервис читает события из Kafka.
+Kafka может прислать одно сообщение повторно: consumer обработал event, но упал до commit offset.
+После рестарта прилетит тот же event.
 
-Kafka может прислать одно сообщение повторно: consumer обработал event, но упал до commit offset. После рестарта Kafka отдаст тот же event еще раз.
-
-Без inbox бизнес-логика может выполниться дважды.
-
-## Как работает
-
-Входящее сообщение имеет `event_id`, обработчик имеет `consumer_name`.
+Без inbox бизнес-логика выполнится дважды.
 
 Сервис хранит пару:
 
@@ -16,7 +11,7 @@ Kafka может прислать одно сообщение повторно: 
 event_id + consumer_name
 ```
 
-в таблице `inbox_messages`.
+в `inbox_messages`.
 
 Поток:
 
@@ -27,18 +22,16 @@ Kafka event
  -> inbox: processed
 ```
 
-Если handler упал, статус становится `failed`. Такой event можно обработать снова.
+Если handler упал, статус станет `failed`. Такой event можно прогнать снова.
 
 Если event уже `processing` или `processed`, handler не запускается.
 
-## Код
+## Файлы
 
 - `src/Application/Notifications/Commands/ProcessInboxMessageHandler.php`
 - `src/Application/Notifications/Ports/InboxMessageRepository.php`
 - `src/Infrastructure/Notifications/Events/EloquentInboxMessageRepository.php`
 - `database/migrations/2026_05_20_000000_create_inbox_messages_table.php`
-
-Проверка:
 
 ```bash
 docker compose exec laravel.test php artisan test tests/Feature/InboxMessageIntegrationTest.php

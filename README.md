@@ -2,15 +2,10 @@
 
 [![CI](https://github.com/robotateme/notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/robotateme/notifications/actions/workflows/ci.yml)
 
-Микросервис уведомлений для Email/SMS/Push: API принимает уведомления, Laravel Queue отправляет их provider-у, Kafka получает события о статусах через outbox.
+Микросервис уведомлений для Email/SMS/Push: API принимает запрос, queue отправляет provider-у,
+outbox кладет события в Kafka.
 
 ## Быстрый старт
-
-```bash
-docker compose up -d --build
-```
-
-То же самое через Make:
 
 ```bash
 make up
@@ -18,37 +13,34 @@ make validate
 make test
 ```
 
-После старта:
-
 - API: `http://localhost/api`
 - Kafka UI: `http://localhost:8081`
 - OpenAPI: [docs/openapi.yaml](docs/openapi.yaml)
-
-Остановка:
 
 ```bash
 make down
 ```
 
-## Что внутри
+## Фичи
 
 - Bulk API для массовой отправки Email/SMS и single API для Email/SMS/Push.
 - Приоритеты: `transactional` идет в `notifications-high`, `marketing` - в `notifications`.
 - Статусы: `queued`, `sent`, `delivered`, `dropped`.
-- Idempotency key для защиты от дублей API.
-- Outbox для надежной публикации событий в Kafka.
-- Inbox для идемпотентной обработки входящих Kafka events.
+- Idempotency key, чтобы не плодить дубли.
+- Outbox, чтобы не терять события до Kafka.
+- Inbox, чтобы не выполнять входящие Kafka events дважды.
 - Retry/DLQ для outbox.
-- Trace id для связи HTTP, queue, outbox и Kafka.
-- Интеграционные тесты покрывают API, queue worker, provider mock, outbox retry/DLQ и inbox.
+- Trace id, чтобы видеть путь запроса через HTTP, queue, outbox и Kafka.
 
 ## Документация
 
 - [Локальный запуск](docs/local-development.md)
 - [API](docs/api.md)
+- [Тестирование](docs/testing.md)
 - [Архитектура](docs/architecture.md)
-- [Reliability и Outbox](docs/reliability.md)
+- [Надежность и Outbox](docs/reliability.md)
 - [Inbox](docs/inbox.md)
+- [Нагрузка](docs/load-testing.md)
 
 ## Стек
 

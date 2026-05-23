@@ -1,10 +1,7 @@
 # API
 
-OpenAPI: [openapi.yaml](openapi.yaml)
-
-Postman: [postman_collection.json](postman_collection.json)
-
-Проверка:
+- OpenAPI: [openapi.yaml](openapi.yaml)
+- Postman: [postman_collection.json](postman_collection.json)
 
 ```bash
 make openapi
@@ -60,7 +57,7 @@ curl -X POST http://localhost/api/notifications/{notification}/delivery-status \
   -d '{"status": "delivered"}'
 ```
 
-Допустимые callback-статусы:
+Статусы:
 
 - `delivered`
 - `dropped`
